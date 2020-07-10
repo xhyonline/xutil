@@ -1,5 +1,7 @@
 package beego
 
+// bee 框架相关工具包
+
 type respData struct {
 	Code int         `json:"code"`
 	Msg  string      `json:"message"`
