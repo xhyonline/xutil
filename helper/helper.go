@@ -7,49 +7,99 @@ import (
 	"errors"
 	"fmt"
 	"hash/crc32"
-	"io/ioutil"
 	"math/rand"
-	"net/http"
-	"net/url"
 	"reflect"
+	"regexp"
 	"strconv"
+	"strings"
 	"time"
+	"unicode"
 )
 
-// 工具包
+// 自用工具包
 
-//HTTP Post请求发送表单形式
-//请求参数key_val:	url.Values{"name": {"小明"},"age": {"23"}}
-func HttpPostForm(path string, val url.Values) (string, error) {
-	resp, err := http.PostForm(path, val)
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return "", errors.New("读取失败")
-	}
-	return string(body), nil
+// IsIPv4 判断是否是否 ipv4 地址
+func IsIPv4(address string) bool {
+	return strings.Count(address, ":") < 2
 }
 
-//HTTP	get请求
-func HttpGet(url string) (string, error) {
-	var res, err = http.Get(url) //res是响应
-	if err != nil {
-		return "", errors.New("请求出错")
-	}
-	defer res.Body.Close()
-	bytes, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		fmt.Println("读取出错:", err)
-		return "", errors.New("读取出错")
-	}
-	return string(bytes), nil
+// IsIPv6 判断是否是 ipv6 地址
+func IsIPv6(address string) bool {
+	return strings.Count(address, ":") >= 2
 }
 
-//生成唯一Session_Id
-func Session_Id() string {
+// IsEmail 判断是否是一个邮箱号
+func IsEmail(email string) bool {
+	res, _ := regexp.MatchString(`^[0-9A-Za-zd]+([-_.][0-9A-Za-zd]+)*@([0-9A-Za-zd]+[-.])+[A-Za-zd]{2,5}$`,
+		email)
+	return res
+}
+
+// IsMobile 是否是手机号码
+func IsMobile(mobile string) bool {
+	result, _ := regexp.MatchString(`^(1[3|4|5|8][0-9]\d{4,8})$`, mobile)
+	return result
+}
+
+// HaveChinese 判断字符串中有无中文
+func HaveChinese(str string) bool {
+	var a = regexp.MustCompile("^[\u4e00-\u9fa5]$")
+	//接受正则表达式的范围
+	for _, v := range str {
+		if a.MatchString(string(v)) {
+			return true
+		}
+	}
+	return false
+}
+
+// HaveLetter 判断字符串中是否有英文字母
+func HaveLetter(str string) bool {
+	for _, s := range str {
+		if unicode.IsLetter(s) {
+			return true
+		}
+	}
+	return false
+}
+
+// 压缩字符串,将字符串去除各 tab 、空格等
+func CompressStr(str string) string {
+	if str == "" {
+		return ""
+	}
+	return strings.Join(strings.Fields(str), "")
+}
+
+// ParseDate 解析一条日期 兼容多种格式
+func ParseDate(str string) (time.Time, error) {
+	var (
+		date  time.Time
+		err   error
+		float float64
+	)
+	switch {
+	case strings.Contains(str, "/"):
+		date, err = time.ParseInLocation("2006/01/02", str, time.Local)
+	case strings.Contains(str, "-"):
+		date, err = time.ParseInLocation("2006-01-02", str, time.Local)
+	default:
+		// 防止Excel 出现浮点型数字如20200101.0必须要转换为浮点型先
+		float, err = strconv.ParseFloat(str, 64)
+		if err != nil {
+			return date, fmt.Errorf("日期解析失败 %s", str)
+		}
+		strTime := strconv.Itoa(int(float))
+		date, err = time.ParseInLocation("20060102", strTime, time.Local)
+	}
+	if err != nil {
+		return date, fmt.Errorf("日期解析失败 %s", str)
+	}
+	return date, nil //
+}
+
+// 生成唯一SessionID
+func SessionID() string {
 	unix := Time() //获取当前时间戳
 	nano := time.Now().UnixNano()
 	rand.Seed(nano)
@@ -58,18 +108,18 @@ func Session_Id() string {
 	return base64.URLEncoding.EncodeToString([]byte(Md5(strconv.FormatInt(res, 10))))
 }
 
-//获取时间戳
+// Time 获取时间戳
 func Time() int64 {
 	return time.Now().Unix()
 }
 
-//时间戳 转日期	2020-02-06 19:36:32
+// TimeStampToDate 时间戳 转日期	2020-02-06 19:36:32
 func TimeStampToDate(timestamp int) string {
 	tm := time.Unix(int64(timestamp), 0)
-	return tm.Format("2006-01-02 15:04:05") //2018-07-11 15:10:19
+	return tm.Format("2006-01-02 15:04:05") // 2018-07-11 15:10:19
 }
 
-//PHP date函数,timeStamp -1 获取当前标准日期 Y-m-d H:i:s
+// PHP date函数,timeStamp -1 获取当前标准日期 Y-m-d H:i:s
 func Date(str string, timeStamp int) string {
 	var tm time.Time
 	if timeStamp != -1 {
@@ -95,7 +145,7 @@ func Date(str string, timeStamp int) string {
 	}
 }
 
-//二进制字符串转十进制
+// Str2DEC 二进制字符串转十进制
 func Str2DEC(s string) (num int) {
 	l := len(s)
 	for i := l - 1; i >= 0; i-- {
@@ -104,34 +154,7 @@ func Str2DEC(s string) (num int) {
 	return
 }
 
-//二叉树结构
-type TreeNode struct {
-	Left  *TreeNode
-	Right *TreeNode
-	Val   int
-}
-
-//判断两棵树是否相等,传入两棵树的根
-func IsSameTree(p *TreeNode, q *TreeNode) bool {
-	if p == nil && q == nil {
-		return true
-	}
-	if p != nil && q != nil && p.Val == q.Val {
-		return IsSameTree(p.Left, q.Left) && IsSameTree(p.Right, q.Right)
-	} else {
-		return false
-	}
-}
-
-//获取树的最大深度
-func MaxDepth(root *TreeNode) int {
-	if root == nil {
-		return 0
-	}
-	return GetMax(MaxDepth(root.Left), MaxDepth(root.Right)) + 1
-}
-
-//两个值之间取最大值
+// GetMax 两个值之间取最大值
 func GetMax(i, j int) int {
 	if i > j {
 		return i
@@ -139,7 +162,7 @@ func GetMax(i, j int) int {
 	return j
 }
 
-//slice去重,传入slice,返回一个新的值
+// slice去重,传入slice,返回一个新的值
 func duplicate(data interface{}) interface{} {
 	inArr := reflect.ValueOf(data)
 	if inArr.Kind() != reflect.Slice && inArr.Kind() != reflect.Array {
@@ -160,7 +183,7 @@ func duplicate(data interface{}) interface{} {
 	return outArr.Interface()
 }
 
-//slice去重,传入slice指针,直接修改原数据
+// slice去重,传入slice指针,直接修改原数据
 func DuplicateSlice(data interface{}) {
 	dataVal := reflect.ValueOf(data)
 	if dataVal.Kind() != reflect.Ptr {
@@ -181,23 +204,23 @@ func GetRandom(num int) int {
 	return x
 }
 
-//md5加密
+// md5加密
 func Md5(str string) string {
 	Md5Inst := md5.New()
-	Md5Inst.Write([]byte(str))
+	_, _ = Md5Inst.Write([]byte(str))
 	Result := Md5Inst.Sum([]byte(""))
 	return fmt.Sprintf("%x\n\n", Result)
 }
 
-//sha1加密
+// sha1加密
 func Sha1(str string) string {
 	Sha1Inst := sha1.New()
-	Sha1Inst.Write([]byte(str))
+	_, _ = Sha1Inst.Write([]byte(str))
 	Result := Sha1Inst.Sum([]byte(""))
 	return fmt.Sprintf("%x\n\n", Result)
 }
 
-//字符串转换为hash数字
+// 字符串转换为hash数字
 func HashCode(s string) int {
 	v := int(crc32.ChecksumIEEE([]byte(s)))
 	if v >= 0 {
@@ -208,24 +231,6 @@ func HashCode(s string) int {
 	}
 	// v == MinInt
 	return v
-}
-
-// 解析一个日期
-func ParseDate(str string) (time.Time, error) {
-	float, err := strconv.ParseFloat(str, 64)
-	var date time.Time
-	// 不能转代表填写的不是纯数字格式的日期
-	if err != nil {
-		date, err = time.ParseInLocation("2006/01/02", str, time.Local)
-	} else {
-		str := strconv.Itoa(int(float))
-		date, err = time.ParseInLocation("20060102", str, time.Local)
-	}
-	// 如果都解析失败了,这条日期就真错了
-	if err != nil {
-		return date, fmt.Errorf("日期解析失败 %s", str)
-	}
-	return date, nil
 }
 
 // CleanStruct 清洗结构体中的每一个字段,当且结构体字段的值 与 old 全等时才会替换
@@ -259,4 +264,227 @@ ROW:
 		}
 	}
 	return nil
+}
+
+// ================ 身份证相关 =================
+
+// GetAgeByID 凭身份证计算年龄
+func GetAgeByID(identification_number string) int {
+	reg := regexp.MustCompile(`^[1-9]\d{5}(18|19|20)(\d{2})((0[1-9])|(1[0-2]))(([0-2][1-9])|10|20|30|31)\d{3}[0-9Xx]$`)
+	//reg := regexp.MustCompile(`^[1-9]\d{5}(18|19|20)`)
+	params := reg.FindStringSubmatch(identification_number)
+	birYear, _ := strconv.Atoi(params[1] + params[2])
+	birMonth, _ := strconv.Atoi(params[3])
+	age := time.Now().Year() - birYear
+	if int(time.Now().Month()) < birMonth {
+		age--
+	}
+	return age
+}
+
+var weight = [17]int{7, 9, 10, 5, 8, 4, 2, 1, 6, 3, 7, 9, 10, 5, 8, 4, 2}
+var validValue = [11]byte{'1', '0', 'X', '9', '8', '7', '6', '5', '4', '3', '2'}
+var validProvince = []string{
+	"11", // 北京市
+	"12", // 天津市
+	"13", // 河北省
+	"14", // 山西省
+	"15", // 内蒙古自治区
+	"21", // 辽宁省
+	"22", // 吉林省
+	"23", // 黑龙江省
+	"31", // 上海市
+	"32", // 江苏省
+	"33", // 浙江省
+	"34", // 安徽省
+	"35", // 福建省
+	"36", // 山西省
+	"37", // 山东省
+	"41", // 河南省
+	"42", // 湖北省
+	"43", // 湖南省
+	"44", // 广东省
+	"45", // 广西壮族自治区
+	"46", // 海南省
+	"50", // 重庆市
+	"51", // 四川省
+	"52", // 贵州省
+	"53", // 云南省
+	"54", // 西藏自治区
+	"61", // 陕西省
+	"62", // 甘肃省
+	"63", // 青海省
+	"64", // 宁夏回族自治区
+	"65", // 新疆维吾尔自治区
+	"71", // 台湾省
+	"81", // 香港特别行政区
+	"91", // 澳门特别行政区
+}
+
+// IsValidCitizenNo 校验是否是有效的身份证号码
+func IsValidCitizenNo(citizenNo *[]byte) bool {
+	nLen := len(*citizenNo)
+	if nLen != 15 && nLen != 18 {
+		return false
+	}
+
+	for i, v := range *citizenNo {
+		n, _ := strconv.Atoi(string(v))
+		if n >= 0 && n <= 9 {
+			continue
+		}
+
+		if v == 'X' && i == 16 {
+			continue
+		}
+
+		return false
+	}
+
+	if !CheckProvinceValid(*citizenNo) {
+		return false
+	}
+
+	if nLen == 15 {
+		*citizenNo = Citizen15To18(*citizenNo)
+		if citizenNo == nil {
+			return false
+		}
+	} else if !IsValidCitizenNo18(citizenNo) {
+		return false
+	}
+
+	nYear, _ := strconv.Atoi(string((*citizenNo)[6:10]))
+	nMonth, _ := strconv.Atoi(string((*citizenNo)[10:12]))
+	nDay, _ := strconv.Atoi(string((*citizenNo)[12:14]))
+
+	return CheckBirthdayValid(nYear, nMonth, nDay)
+}
+
+// GetCitizenNoInfo 从身份证号码中获得信息。生日(时间戳)，性别，省份代码。
+func GetCitizenNoInfo(citizenNo []byte) (err error, birthday int64, isMale bool, addrMask int) {
+	err = nil
+	birthday = 0
+	isMale = false
+	addrMask = 0
+	if !IsValidCitizenNo(&citizenNo) {
+		err = errors.New("Invalid citizen number.")
+		return
+	}
+
+	// Birthday information.
+	nYear, _ := strconv.Atoi(string(citizenNo[6:10]))
+	nMonth, _ := strconv.Atoi(string(citizenNo[10:12]))
+	nDay, _ := strconv.Atoi(string(citizenNo[12:14]))
+	birthday = time.Date(nYear, time.Month(nMonth), nDay, 0, 0, 0, 0, time.Local).Unix()
+
+	// Gender information.
+	genderMask, _ := strconv.Atoi(string(citizenNo[16]))
+	if genderMask%2 == 0 {
+		isMale = false
+	} else {
+		isMale = true
+	}
+
+	// Address code mask.
+	addrMask, _ = strconv.Atoi(string(citizenNo[:2]))
+
+	return
+}
+
+// IsValidCitizenNo18 校验是否是 18 位身份证
+func IsValidCitizenNo18(citizenNo18 *[]byte) bool {
+	nLen := len(*citizenNo18)
+	if nLen != 18 {
+		return false
+	}
+
+	nSum := 0
+	for i := 0; i < nLen-1; i++ {
+		n, _ := strconv.Atoi(string((*citizenNo18)[i]))
+		nSum += n * weight[i]
+	}
+	mod := nSum % 11
+	return validValue[mod] == (*citizenNo18)[17]
+}
+
+// Citizen15To18 15 位身份证转 18 位
+func Citizen15To18(citizenNo15 []byte) []byte {
+	nLen := len(citizenNo15)
+	if nLen != 15 {
+		return nil
+	}
+
+	citizenNo18 := make([]byte, 0)
+	citizenNo18 = append(citizenNo18, citizenNo15[:6]...)
+	citizenNo18 = append(citizenNo18, '1', '9')
+	citizenNo18 = append(citizenNo18, citizenNo15[6:]...)
+
+	sum := 0
+	for i, v := range citizenNo18 {
+		n, _ := strconv.Atoi(string(v))
+		sum += n * weight[i]
+	}
+	mod := sum % 11
+	citizenNo18 = append(citizenNo18, validValue[mod])
+
+	return citizenNo18
+}
+
+// IsLeapYear 是否是闰年
+func IsLeapYear(nYear int) bool {
+	if nYear <= 0 {
+		return false
+	}
+
+	if (nYear%4 == 0 && nYear%100 != 0) || nYear%400 == 0 {
+		return true
+	}
+
+	return false
+}
+
+// CheckBirthdayValid 验证是否是一个有效的生日
+func CheckBirthdayValid(nYear, nMonth, nDay int) bool {
+	if nYear < 1900 || nMonth <= 0 || nMonth > 12 || nDay <= 0 || nDay > 31 {
+		return false
+	}
+
+	curYear, curMonth, curDay := time.Now().Date()
+	if nYear == curYear {
+		if nMonth > int(curMonth) {
+			return false
+		} else if nMonth == int(curMonth) && nDay > curDay {
+			return false
+		}
+	}
+
+	if 2 == nMonth {
+		if IsLeapYear(nYear) && nDay > 29 {
+			return false
+		} else if nDay > 28 {
+			return false
+		}
+	} else if 4 == nMonth || 6 == nMonth || 9 == nMonth || 11 == nMonth {
+		if nDay > 30 {
+			return false
+		}
+	}
+
+	return true
+}
+
+// CheckProvinceValid 校验身份证中的省份代码
+func CheckProvinceValid(citizenNo []byte) bool {
+	provinceCode := make([]byte, 0)
+	provinceCode = append(provinceCode, citizenNo[:2]...)
+	provinceStr := string(provinceCode)
+
+	for i := range validProvince {
+		if provinceStr == validProvince[i] {
+			return true
+		}
+	}
+
+	return false
 }
