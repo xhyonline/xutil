@@ -3,10 +3,11 @@ package kv
 import (
 	"time"
 
+	"github.com/vmihailenco/msgpack/v4"
 	"github.com/xhyonline/xutil/xtype"
 
 	"github.com/go-redis/cache/v7"
-	"github.com/go-redis/redis"
+	"github.com/go-redis/redis/v7"
 	"github.com/xhyonline/xutil/xlog"
 )
 
@@ -165,7 +166,18 @@ func (c *client) Clean(cate string) {
 
 // NewRedisClient 新建一个 Redis 客户端
 func NewRedisClient(config Config) *client {
-	return &client{
+	c := &client{
 		kv: New(config),
 	}
+	// 必须等到 redis 建立完毕
+	c.codec = &cache.Codec{
+		Redis: c.kv,
+		Marshal: func(v interface{}) ([]byte, error) {
+			return msgpack.Marshal(v)
+		},
+		Unmarshal: func(b []byte, v interface{}) error {
+			return msgpack.Unmarshal(b, v)
+		},
+	}
+	return c
 }
