@@ -48,5 +48,7 @@ func New(config Config) (*mgo.Database, error) {
 	if err != nil {
 		return nil, err
 	}
+	m.SetMode(mgo.Monotonic, true)
+	// defer m.Clone()	可不能关闭
 	return m.DB(config.Database), nil
 }
