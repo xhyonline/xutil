@@ -1,6 +1,7 @@
 package kv
 
 import (
+	"C"
 	"time"
 
 	"github.com/vmihailenco/msgpack/v4"
@@ -72,8 +73,26 @@ type Client interface {
 	LGet(key string) (xtype.Strings, error)
 	// LPush 为列表右侧增加一个元素
 	LPush(key, item string) error
+	// LLen 获取列表长度
+	LLen(list string) (int64, error)
+	// LPop 左侧弹出一个元素
+	LPop(key string) (string, error)
+	// RPop 右侧弹出一个元素
+	RPop(key string) (string, error)
 	// LRemove 删除列表中的指定元素
 	LRemove(key, item string) error
+	// HGet 获取 Hash 类型中的值
+	HGet(key, filed string) (string, error)
+	// HSet 设置一个 Hash 类型的值
+	HSet(key, filed string) (bool, error, interface{})
+	// HMSet 设置多个 Hash 值
+	HMSet(key string, fields map[string]interface{}) (string, error)
+	// HGetAll 获取所有的 Hash 返回 Map
+	HGetAll(key string) (map[string]string, error)
+	// 判断 Hash 是否存在某个 Key
+	HExists(key, filed string) (bool, error)
+	// 删除 Hash 中的多个元素
+	HDel(key string, filed ...string) error
 	// SGet 获取集合
 	SGet(key string) (xtype.Strings, error)
 	// SAdd 为集合增加一个元素
@@ -162,6 +181,120 @@ func (c *client) Clean(cate string) {
 		i++
 	}
 	log.Infof("delete %d %s cache", i, cate)
+}
+
+// LPush 为列表右侧增加一个元素
+func (c *client) LPush(list, item string) error {
+	cmd := c.kv.LPush(list, item)
+	return cmd.Err()
+}
+
+// LRemove 删除列表中所有的指定元素 从表头开始向表尾搜索
+func (c *client) LRemove(list, item string) error {
+	cmd := c.kv.LRem(list, 0, item)
+	return cmd.Err()
+}
+
+// LPop 左侧弹出一个元素
+func (c *client) LPop(list string) (string, error) {
+	strCmd := c.kv.LPop(list)
+	err := strCmd.Err()
+	if err != nil {
+		return "", err
+	}
+	str := strCmd.Val()
+	return str, nil
+}
+
+// RPop 右侧弹出一个元素
+func (c *client) RPop(list string) (string, error) {
+	cmd := c.kv.RPop(list)
+	err := cmd.Err()
+	if err != nil {
+		return "", err
+	}
+	str := cmd.Val()
+	return str, nil
+}
+
+// LLen 返回列表长度
+func (c *client) LLen(list string) (int64, error) {
+	cmd := c.kv.LLen(list)
+	err := cmd.Err()
+	if err != nil {
+		return 0, err
+	}
+	return cmd.Val(), nil
+}
+
+// LGet 获取列表所有元素
+func (c *client) LGet(list string) (xtype.Strings, error) {
+	cmd := c.kv.LRange(list, 0, -1)
+	err := cmd.Err()
+	if err != nil {
+		return nil, err
+	}
+	return xtype.Strings(cmd.Val()), nil
+}
+
+// HGet 获取 Hash 类型的值
+func (c *client) HGet(key, filed string) (string, error) {
+	cmd := c.kv.HGet(key, filed)
+	err := cmd.Err()
+	if err != nil {
+		return "", err
+	}
+	return cmd.Val(), nil
+}
+
+// HSet 设置 Hash 类型的值 注: interface 类型别传一个指针结构体....它是解析不了的
+func (c *client) HSet(key, filed string, value interface{}) (bool, error) {
+	cmd := c.kv.HSet(key, filed, value)
+	err := cmd.Err()
+	if err != nil {
+		return false, err
+	}
+	return cmd.Val(), nil
+}
+
+// HMSet 设置多个 Hash ,如果成功返回字符串 OK
+func (c *client) HMSet(key string, fields map[string]interface{}) (string, error) {
+	cmd := c.kv.HMSet(key, fields)
+	err := cmd.Err()
+	if err != nil {
+		return "", err
+	}
+	return cmd.Val(), nil
+}
+
+// HGetAll 获取所有的 Hash
+func (c *client) HGetAll(key string) (map[string]string, error) {
+	cmd := c.kv.HGetAll(key)
+	err := cmd.Err()
+	if err != nil {
+		return nil, err
+	}
+	return cmd.Val(), nil
+}
+
+// HExists 判断 Hash 中某个 key 是否存在
+func (c *client) HExists(key, field string) (bool, error) {
+	cmd := c.kv.HExists(key, field)
+	err := cmd.Err()
+	if err != nil {
+		return false, err
+	}
+	return cmd.Val(), nil
+}
+
+// HDel Hash 删除
+func (c *client) HDel(key, field string) (int64, error) {
+	cmd := c.kv.HDel(key, field)
+	err := cmd.Err()
+	if err != nil {
+		return 0, err
+	}
+	return cmd.Val(), nil
 }
 
 // NewRedisClient 新建一个 Redis 客户端
