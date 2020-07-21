@@ -9,7 +9,7 @@ import (
 )
 
 // MongoDB 工具包
-var log = xlog.Get()
+var log = xlog.Get(true)
 
 type Config struct {
 	Database string // 数据库
@@ -38,15 +38,18 @@ func New(config Config) (*mgo.Database, error) {
 		break
 	}
 	log.Info("Mongo Connect Success......")
+	// 当账号密码不为空时
 	// 登录 MongoDB
-	err = m.Login(&mgo.Credential{
-		Username:    config.User,
-		Password:    config.Password,
-		Source:      config.Database,
-		ServiceHost: config.Host,
-	})
-	if err != nil {
-		return nil, err
+	if config.User != "" || config.Password != "" {
+		err = m.Login(&mgo.Credential{
+			Username:    config.User,
+			Password:    config.Password,
+			Source:      config.Database,
+			ServiceHost: config.Host,
+		})
+		if err != nil {
+			return nil, err
+		}
 	}
 	m.SetMode(mgo.Monotonic, true)
 	// defer m.Clone()	可不能关闭
