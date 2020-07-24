@@ -209,7 +209,7 @@ func Md5(str string) string {
 	Md5Inst := md5.New()
 	_, _ = Md5Inst.Write([]byte(str))
 	Result := Md5Inst.Sum([]byte(""))
-	return fmt.Sprintf("%x\n\n", Result)
+	return fmt.Sprintf("%x", Result)
 }
 
 // sha1加密
