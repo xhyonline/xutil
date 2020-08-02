@@ -1,13 +1,14 @@
 package db
 
 import (
+	"time"
+
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 	"github.com/xhyonline/xutil/xlog"
-	"time"
 )
 
-var log = xlog.Get()
+var log = xlog.Get(false)
 
 // Config 数据库配置
 type Config struct {

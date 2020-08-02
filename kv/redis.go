@@ -13,7 +13,7 @@ import (
 )
 
 // 工具包 创建 Redis
-var log = xlog.Get()
+var log = xlog.Get(false)
 
 // Config 数据库配置，可以被主配置直接引用
 type Config struct {
@@ -21,6 +21,8 @@ type Config struct {
 	Port     string `default:"6379"`
 	Password string
 	DB       int `default:"0"`
+	PoolSize int `default:"10"` // 连接池的数量,官方默认设定是 10
+
 }
 
 // New 用配置生成一个 redis 数据库 client,若目标数据库未启动会一直等待
@@ -29,6 +31,7 @@ func New(config Config) *redis.Client {
 		Addr:     config.Host + ":" + config.Port,
 		Password: config.Password,
 		DB:       config.DB,
+		PoolSize: config.PoolSize,
 	})
 
 	for {
@@ -105,7 +108,7 @@ type Client interface {
 
 // client Redis 客户端
 type client struct {
-	kv    *redis.Client
+	Kv    *redis.Client // 可以通过 Kv.Conn() 方法获取连接池中的一个连接,通过 close 后自动放回连接池
 	codec *cache.Codec
 }
 
@@ -137,17 +140,17 @@ func (c *client) Get(key string, pointer interface{}) error {
 
 // Set 写 string 缓存
 func (c *client) SetString(key string, s string, exp time.Duration) error {
-	return c.kv.Set(key, s, exp).Err()
+	return c.Kv.Set(key, s, exp).Err()
 }
 
 // Get 读 string 缓存
 func (c *client) GetString(key string) (string, error) {
-	return c.kv.Get(key).Result()
+	return c.Kv.Get(key).Result()
 }
 
 // Exists 是否存在
 func (c *client) Exists(key string) bool {
-	return c.kv.Exists(key).Val() != 0
+	return c.Kv.Exists(key).Val() != 0
 }
 
 // Delete 清缓存
@@ -162,7 +165,7 @@ func (c *client) Delete(key string) {
 
 // Expire 刷新过期时间
 func (c *client) Expire(key string, ex time.Duration) error {
-	return c.kv.Expire(key, ex).Err()
+	return c.Kv.Expire(key, ex).Err()
 }
 
 // Clean 批量清除一类缓存
@@ -172,7 +175,7 @@ func (c *client) Clean(cate string) {
 		return
 	}
 	i := 0
-	for _, key := range c.kv.Keys(cate + "*").Val() {
+	for _, key := range c.Kv.Keys(cate + "*").Val() {
 		err := c.codec.Delete(key)
 		if err != nil {
 			log.WithError(err).WithField("key", key).Error("delete cache failed,stop batch delete")
@@ -185,19 +188,19 @@ func (c *client) Clean(cate string) {
 
 // LPush 为列表右侧增加一个元素
 func (c *client) LPush(list, item string) error {
-	cmd := c.kv.LPush(list, item)
+	cmd := c.Kv.LPush(list, item)
 	return cmd.Err()
 }
 
 // LRemove 删除列表中所有的指定元素 从表头开始向表尾搜索
 func (c *client) LRemove(list, item string) error {
-	cmd := c.kv.LRem(list, 0, item)
+	cmd := c.Kv.LRem(list, 0, item)
 	return cmd.Err()
 }
 
 // LPop 左侧弹出一个元素
 func (c *client) LPop(list string) (string, error) {
-	cmd := c.kv.LPop(list)
+	cmd := c.Kv.LPop(list)
 	if cmd.Err() != nil {
 		return "", cmd.Err()
 	}
@@ -207,7 +210,7 @@ func (c *client) LPop(list string) (string, error) {
 
 // RPop 右侧弹出一个元素
 func (c *client) RPop(list string) (string, error) {
-	cmd := c.kv.RPop(list)
+	cmd := c.Kv.RPop(list)
 
 	if cmd.Err() != nil {
 		return "", cmd.Err()
@@ -218,7 +221,7 @@ func (c *client) RPop(list string) (string, error) {
 
 // LLen 返回列表长度
 func (c *client) LLen(list string) (int64, error) {
-	cmd := c.kv.LLen(list)
+	cmd := c.Kv.LLen(list)
 
 	if cmd.Err() != nil {
 		return 0, cmd.Err()
@@ -228,7 +231,7 @@ func (c *client) LLen(list string) (int64, error) {
 
 // LGet 获取列表所有元素
 func (c *client) LGet(list string) (xtype.Strings, error) {
-	cmd := c.kv.LRange(list, 0, -1)
+	cmd := c.Kv.LRange(list, 0, -1)
 
 	if cmd.Err() != nil {
 		return nil, cmd.Err()
@@ -238,7 +241,7 @@ func (c *client) LGet(list string) (xtype.Strings, error) {
 
 // HGet 获取 Hash 类型的值
 func (c *client) HGet(key, filed string) (string, error) {
-	cmd := c.kv.HGet(key, filed)
+	cmd := c.Kv.HGet(key, filed)
 
 	if cmd.Err() != nil {
 		return "", cmd.Err()
@@ -248,27 +251,27 @@ func (c *client) HGet(key, filed string) (string, error) {
 
 // HSet 设置 Hash 类型的值 注: interface 类型别传一个指针结构体....它是解析不了的
 func (c *client) HSet(key, filed string, value interface{}) (bool, error) {
-	cmd := c.kv.HSet(key, filed, value)
+	cmd := c.Kv.HSet(key, filed, value)
 
 	if cmd.Err() != nil {
 		return false, cmd.Err()
 	}
-	return cmd.Val(), nil
+	return true, nil
 }
 
 // HMSet 设置多个 Hash ,如果成功返回字符串 OK
 func (c *client) HMSet(key string, fields map[string]interface{}) (string, error) {
-	cmd := c.kv.HMSet(key, fields)
+	cmd := c.Kv.HMSet(key, fields)
 
 	if cmd.Err() != nil {
 		return "", cmd.Err()
 	}
-	return cmd.Val(), nil
+	return "OK", nil
 }
 
 // HGetAll 获取所有的 Hash
 func (c *client) HGetAll(key string) (map[string]string, error) {
-	cmd := c.kv.HGetAll(key)
+	cmd := c.Kv.HGetAll(key)
 
 	if cmd.Err() != nil {
 		return nil, cmd.Err()
@@ -278,7 +281,7 @@ func (c *client) HGetAll(key string) (map[string]string, error) {
 
 // HExists 判断 Hash 中某个 key 是否存在
 func (c *client) HExists(key, field string) (bool, error) {
-	cmd := c.kv.HExists(key, field)
+	cmd := c.Kv.HExists(key, field)
 
 	if cmd.Err() != nil {
 		return false, cmd.Err()
@@ -288,7 +291,7 @@ func (c *client) HExists(key, field string) (bool, error) {
 
 // HDel Hash 删除
 func (c *client) HDel(key, field string) (int64, error) {
-	cmd := c.kv.HDel(key, field)
+	cmd := c.Kv.HDel(key, field)
 
 	if cmd.Err() != nil {
 		return 0, cmd.Err()
@@ -296,14 +299,14 @@ func (c *client) HDel(key, field string) (int64, error) {
 	return cmd.Val(), nil
 }
 
-// NewRedisClient 新建一个 Redis 客户端
+// NewRedisClient 新建一个 Redis 客户端 它使用的是 go-redis 包
 func NewRedisClient(config Config) *client {
 	c := &client{
-		kv: New(config),
+		Kv: New(config),
 	}
 	// 必须等到 redis 建立完毕
 	c.codec = &cache.Codec{
-		Redis: c.kv,
+		Redis: c.Kv,
 		Marshal: func(v interface{}) ([]byte, error) {
 			return msgpack.Marshal(v)
 		},
