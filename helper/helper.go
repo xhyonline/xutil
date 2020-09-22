@@ -65,6 +65,20 @@ func HaveLetter(str string) bool {
 	return false
 }
 
+// IsOnlyNumber 是否是纯数字
+func IsOnlyNumber(str string) bool {
+	res, _ := regexp.MatchString(`^[0-9]*$`,
+		str)
+	return res
+}
+
+// HaveSpecialCharacters 是否有特殊字符
+func HaveSpecialCharacters(str string) bool {
+	res, _ := regexp.MatchString("[`~!@#$^&*()=|{}':;',\\[\\].<>《》/?~！@#￥……&*（）——|{}【】‘；：”“'。，、？ ]",
+		str)
+	return res
+}
+
 // 压缩字符串,将字符串去除各 tab 、空格等
 func CompressStr(str string) string {
 	if str == "" {
