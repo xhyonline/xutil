@@ -1,3 +1,5 @@
+// helper 自用常用函数工具包
+
 package helper
 
 import (
@@ -16,8 +18,6 @@ import (
 	"unicode"
 )
 
-// 自用工具包
-
 // IsIPv4 判断是否是否 ipv4 地址
 func IsIPv4(address string) bool {
 	res, _ := regexp.MatchString(`^((2[0-4]\d|25[0-5]|[01]?\d\d?)\.){3}(2[0-4]\d|25[0-5]|[01]?\d\d?)$`, address)
@@ -35,6 +35,12 @@ func IsEmail(email string) bool {
 	res, _ := regexp.MatchString(`^[0-9A-Za-zd]+([-_.][0-9A-Za-zd]+)*@([0-9A-Za-zd]+[-.])+[A-Za-zd]{2,5}$`,
 		email)
 	return res
+}
+
+// IsURL 判断是否是一个合法的 URL
+func IsURL(url string) bool {
+	result, _ := regexp.MatchString(`(https?|ftp|file)://[-A-Za-z0-9+&@#/%?=~_|!:,.;]+[-A-Za-z0-9+&@#/%=~_|]`, url)
+	return result
 }
 
 // IsMobile 是否是手机号码
@@ -158,6 +164,33 @@ func Date(str string, timeStamp int) string {
 		return tm.Format("2006-01-02 03 PM")
 	default:
 		return "Date() error"
+	}
+}
+
+// Date 方法的升级版,加入错误返回
+// PHP date函数,timeStamp -1 获取当前标准日期 Y-m-d H:i:s
+func MustDate(str string, timeStamp int) (string, error) {
+	var tm time.Time
+	if timeStamp != -1 {
+		tm = time.Unix(int64(timeStamp), 0)
+	} else {
+		tm = time.Unix(Time(), 0)
+	}
+	switch str {
+	case "Y-m-d H:i:s":
+		return tm.Format("2006-01-02 15:04:05"), nil //2018-07-11 15:10:19
+	case "Y-m-d h:i:s":
+		return tm.Format("2006-01-02 03:04:05 PM"), nil //2020-02-06 11:15:53 PM
+	case "Y-m-d H:i":
+		return tm.Format("2006-01-02 15:04"), nil //2018-07-11 15:10:19
+	case "Y-m-d h:i":
+		return tm.Format("2006-01-02 03:04 PM"), nil
+	case "Y-m-d H":
+		return tm.Format("2006-01-02 15"), nil
+	case "Y-m-d h":
+		return tm.Format("2006-01-02 03 PM"), nil
+	default:
+		return "", fmt.Errorf("找到匹配的格式")
 	}
 }
 

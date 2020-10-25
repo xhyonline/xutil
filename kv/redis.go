@@ -1,3 +1,5 @@
+// 工具包 创建 Redis
+
 package kv
 
 import (
@@ -12,7 +14,6 @@ import (
 	"github.com/xhyonline/xutil/xlog"
 )
 
-// 工具包 创建 Redis
 var log = xlog.Get(false)
 
 // Config 数据库配置，可以被主配置直接引用

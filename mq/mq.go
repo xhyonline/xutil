@@ -1,3 +1,4 @@
+// NSQ 消息中间件工具包
 package mq
 
 import (

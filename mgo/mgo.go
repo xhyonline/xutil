@@ -1,3 +1,4 @@
+// MongoDB 工具包
 package mgo
 
 import (
@@ -8,7 +9,6 @@ import (
 	"gopkg.in/mgo.v2"
 )
 
-// MongoDB 工具包
 var log = xlog.Get(true)
 
 type Config struct {

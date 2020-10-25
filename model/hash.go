@@ -1,3 +1,4 @@
+// GORM 相关工具包
 package model
 
 import (
@@ -7,8 +8,6 @@ import (
 	"github.com/mitchellh/hashstructure"
 	"github.com/rs/xid"
 )
-
-// GORM 相关工具包
 
 // Source 用作抓取数据临时存储，靠哈希值判断是否已存在记录，不可更新和删除
 type Source struct {
