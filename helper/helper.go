@@ -190,7 +190,7 @@ func MustDate(str string, timeStamp int) (string, error) {
 	case "Y-m-d h":
 		return tm.Format("2006-01-02 03 PM"), nil
 	default:
-		return "", fmt.Errorf("找到匹配的格式")
+		return "", fmt.Errorf("找不到匹配的格式")
 	}
 }
 
