@@ -2,6 +2,7 @@ package helper
 
 import (
 	"bytes"
+	"crypto/tls"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -18,10 +19,18 @@ func HTTPJsonRequest(url, method string, body []byte, header http.Header) ([]byt
 	if method != "POST" && method != "PUT" {
 		return nil, fmt.Errorf("请输入正确的请求方法")
 	}
+	// 证书信任
 	c := new(http.Client)
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	c.Transport = tr
 	r, err := http.NewRequest(method, url, bytes.NewReader(body))
 	if err != nil {
 		return nil, err
+	}
+	if header == nil {
+		header = http.Header{}
 	}
 	header.Set("Content-Type", "application/json")
 	r.Header = header
@@ -46,7 +55,12 @@ func HTTPFormRequest(url, method string, v url.Values, header http.Header) ([]by
 	if method != "GET" && method != "POST" && method != "DELETE" && method != "PUT" {
 		return nil, fmt.Errorf("请输入正确的请求方法")
 	}
+	// 证书信任
 	c := new(http.Client)
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	c.Transport = tr
 	var (
 		r   *http.Request
 		err error
@@ -63,6 +77,9 @@ func HTTPFormRequest(url, method string, v url.Values, header http.Header) ([]by
 		if err != nil {
 			return nil, err
 		}
+	}
+	if header == nil {
+		header = http.Header{}
 	}
 	header.Set("Content-Type", "application/x-www-form-urlencoded")
 	r.Header = header
