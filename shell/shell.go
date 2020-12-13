@@ -10,9 +10,10 @@ import (
 )
 
 // Command 执行 linux 命令
-// 示例: Command("ls","/4d56fsf65")
+// 第一种使用示例: Command("ls","/4d56fsf65")
 // 返回参数1: cannot access /4d56fsf65: No such file or directory
 // 返回参数2: Linux 标准错误 1
+// 第二种使用方法 result, err := shell.Command("bash", "-c", "docker ps |grep test |wc -l")  推荐方法
 func Command(name string, args ...string) (string, error) {
 	cmd := exec.Command(name, args...)
 	stderr, _ := cmd.StderrPipe()
