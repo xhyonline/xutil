@@ -15,8 +15,8 @@ require (
 	github.com/nsqio/go-nsq v1.0.8
 	github.com/onsi/ginkgo v1.12.0 // indirect
 	github.com/rs/xid v1.2.1
+	github.com/segmentio/kafka-go v0.4.9
 	github.com/sirupsen/logrus v1.6.0
-	github.com/stretchr/testify v1.4.0 // indirect
 	github.com/vmihailenco/msgpack/v4 v4.3.12
 	golang.org/x/crypto v0.0.0-20200317142112-1b76d66859c6 // indirect
 	golang.org/x/sys v0.0.0-20200615200032-f1bc736245b1 // indirect
