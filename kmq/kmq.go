@@ -1,6 +1,5 @@
 // kmq 包是消息中间件 kafka 的工具包
-// 该包基于库 kafka-go 编写 github.com/segmentio/kafka-go
-//
+
 package kmq
 
 import (
@@ -131,14 +130,14 @@ func (k *kmq) Sub(topic, group string, handle HandlerFunc) error {
 	if err != nil {
 		return fmt.Errorf("订阅时,检查该主题下可允许的最大消费者个数失败 %s", err)
 	}
-	k.consumers = make(map[string]consumerAttr)
 
-	obj := consumerAttr{
+	k.consumers = make(map[string]consumerAttr)
+	k.consumers[topic] = consumerAttr{
 		maxAllowConsumerCount: len(ps),
 		currentConsumerCount:  1,
 		consumerArr:           make([]*kafka.Reader, 0),
 	}
-	k.consumers[topic] = obj
+
 	go handler(r, handle)
 	return nil
 
@@ -188,7 +187,6 @@ func newKafka(c Config) *kmq {
 		}
 		mq.conn = conn
 		mq.config = c
-		break
+		return mq
 	}
-	return mq
 }

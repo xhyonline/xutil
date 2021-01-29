@@ -10,6 +10,7 @@ type Config struct {
 	Port string
 }
 
+// Client 客户端
 type Client interface {
 	// 发布消息
 	Pub(topic string, payload interface{}) error
