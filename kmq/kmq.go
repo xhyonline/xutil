@@ -220,25 +220,28 @@ func handler(r *kafka.Reader, handlerFunc HandlerFunc) {
 
 // newKafka 新建卡夫卡实例
 func newKafka(c Config) *kmq {
-	var mq = new(kmq)
 	for {
-		// 创建 kafka 总控,默认选第一个节点,通过第一个节点。由于 kafka 数据是同步的,因此我们能从该节点获取到
+		// 创建 kafka 总控,默认选第一个节点,由于 kafka 数据是同步的,因此我们能从该节点获取到
 		// 其它节点的信息
+		// 举例:我们又3台服务器,编号为 0、1、2
+		// 主题 A 的分区在 1、2 服务器上,但是如果我们连接 0 号服务器,也能获取到该主题的基本信息
 		conn, err := kafka.Dial("tcp", c.Address[0].Host+":"+c.Address[0].Port)
 		if err != nil {
 			log.Errorf("kafka 连接失败 %s", err)
 			time.Sleep(time.Second)
 			continue
 		}
-		mq.conn = conn
-		mq.config = c
+
 		// 集群地址
 		var address = make([]string, 0)
 		for _, v := range c.Address {
 			str := v.Host + ":" + v.Port
 			address = append(address, str)
 		}
-		mq.address = address
-		return mq
+		return &kmq{
+			conn:    conn,
+			config:  c,
+			address: address,
+		}
 	}
 }
