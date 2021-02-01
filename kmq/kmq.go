@@ -36,6 +36,48 @@ type kmq struct {
 	config Config
 	// 消费者集合与主题集合   key 为主题名 value 该主题下的消费者信息
 	consumers map[string]consumerAttr
+	// 集群地址
+	address []string
+}
+
+// ctx kafka 上下文
+type ctx struct {
+	msg kafka.Message
+}
+
+// Bind 反序列化
+func (c *ctx) Bind(v interface{}) error {
+	return json.Unmarshal(c.msg.Value, v)
+}
+
+// Data 返回原始数据
+func (c *ctx) Data() []byte {
+	return c.msg.Value
+}
+
+// String 字符串转换
+func (c *ctx) String() string {
+	return string(c.msg.Value)
+}
+
+// GetOffset 获取这条数据所在的偏移量
+func (c *ctx) GetOffset() int {
+	return int(c.msg.Offset)
+}
+
+// GetPartition 获取改数据所在分区
+func (c *ctx) GetPartition() int {
+	return c.msg.Partition
+}
+
+// GetKey 获取 key
+func (c *ctx) GetKey() string {
+	return string(c.msg.Key)
+}
+
+// GetTime 获取时间
+func (c *ctx) GetTime() time.Time {
+	return c.msg.Time
 }
 
 // CreateTopic 创建一个主题
@@ -88,17 +130,17 @@ func (k *kmq) CreateGroup(name string, topics ...string) error {
 }
 
 // Pub 推送数据
-func (k *kmq) Pub(topic string, payload interface{}) error {
+func (k *kmq) Pub(topic, key string, payload interface{}) error {
 	body, err := json.Marshal(payload)
 	if err != nil {
 		return err
 	}
-	// 涉及到多个推送
-	producer, _ := k.producer.LoadOrStore(topic, &kafka.Writer{
-		Addr:  kafka.TCP(k.config.Host + ":" + k.config.Port),
-		Topic: topic,
-	})
-	return producer.(*kafka.Writer).WriteMessages(context.Background(), kafka.Message{Value: body})
+	producer, _ := k.producer.LoadOrStore(topic, kafka.NewWriter(kafka.WriterConfig{
+		Brokers: k.address,
+		Topic:   topic,
+	}))
+	// 推送数据
+	return producer.(*kafka.Writer).WriteMessages(context.Background(), kafka.Message{Key: []byte(key), Value: body})
 }
 
 // Sub 订阅
@@ -112,10 +154,10 @@ func (k *kmq) Sub(topic, group string, handle HandlerFunc) error {
 	}
 	// 创建消费者
 	r := kafka.NewReader(kafka.ReaderConfig{
-		Brokers:  []string{k.config.Host + ":" + k.config.Port},
+		Brokers:  k.address,
 		GroupID:  group,
 		Topic:    topic,
-		MinBytes: 1,    //
+		MinBytes: 1024, //
 		MaxBytes: 10e6, // 10MB
 	})
 
@@ -168,7 +210,8 @@ func handler(r *kafka.Reader, handlerFunc HandlerFunc) {
 		if err != nil {
 			log.Fatalf("kafka 读取数据时发生错误 %s", err)
 		}
-		err = handlerFunc(m)
+
+		err = handlerFunc(&ctx{msg: m})
 		if err != nil {
 			log.Fatalf("%s", err)
 		}
@@ -179,7 +222,9 @@ func handler(r *kafka.Reader, handlerFunc HandlerFunc) {
 func newKafka(c Config) *kmq {
 	var mq = new(kmq)
 	for {
-		conn, err := kafka.Dial("tcp", c.Host+":"+c.Port)
+		// 创建 kafka 总控,默认选第一个节点,通过第一个节点。由于 kafka 数据是同步的,因此我们能从该节点获取到
+		// 其它节点的信息
+		conn, err := kafka.Dial("tcp", c.Address[0].Host+":"+c.Address[0].Port)
 		if err != nil {
 			log.Errorf("kafka 连接失败 %s", err)
 			time.Sleep(time.Second)
@@ -187,6 +232,13 @@ func newKafka(c Config) *kmq {
 		}
 		mq.conn = conn
 		mq.config = c
+		// 集群地址
+		var address = make([]string, 0)
+		for _, v := range c.Address {
+			str := v.Host + ":" + v.Port
+			address = append(address, str)
+		}
+		mq.address = address
 		return mq
 	}
 }
