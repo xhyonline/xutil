@@ -9,7 +9,7 @@ type Address struct {
 	Port string
 }
 
-// Config 卡夫卡配置信息
+// Config 卡夫卡集群配置信息
 type Config struct {
 	Address []Address
 }

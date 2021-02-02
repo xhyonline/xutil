@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"strconv"
 	"sync"
 	"time"
 
@@ -28,8 +29,8 @@ type consumerAttr struct {
 }
 
 type kmq struct {
-	// 卡夫卡总控
-	conn *kafka.Conn
+	// 卡夫卡 领导节点
+	leader *kafka.Conn
 	// 有多个生产者,对应不同的主题 key 为主题名称 value 为 *kafka.Writer
 	producer sync.Map
 	// 配置信息
@@ -90,12 +91,12 @@ func (k *kmq) CreateTopic(topic string, partition, replicas int) error {
 			ReplicationFactor: replicas,
 		},
 	}
-	return k.conn.CreateTopics(configs...)
+	return k.leader.CreateTopics(configs...)
 }
 
 // GetTopics 获取主题
 func (k *kmq) GetTopics() ([]string, error) {
-	p, err := k.conn.ReadPartitions()
+	p, err := k.leader.ReadPartitions()
 	if err != nil {
 		return nil, err
 	}
@@ -121,7 +122,7 @@ func (k *kmq) CreateGroup(name string, topics ...string) error {
 		Brokers: nil,
 		Dialer: &kafka.Dialer{
 			DialFunc: func(ctx context.Context, network string, address string) (conn net.Conn, e error) {
-				return k.conn, nil
+				return k.leader, nil
 			},
 		},
 		Topics: topics,
@@ -168,7 +169,7 @@ func (k *kmq) Sub(topic, group string, handle HandlerFunc) error {
 		return nil
 	}
 
-	ps, err := k.conn.ReadPartitions(topic)
+	ps, err := k.leader.ReadPartitions(topic)
 	if err != nil {
 		return fmt.Errorf("订阅时,检查该主题下可允许的最大消费者个数失败 %s", err)
 	}
@@ -187,7 +188,7 @@ func (k *kmq) Sub(topic, group string, handle HandlerFunc) error {
 
 // RemoveTopics 删除主题
 func (k *kmq) RemoveTopics(topic ...string) error {
-	return k.conn.DeleteTopics(topic...)
+	return k.leader.DeleteTopics(topic...)
 }
 
 // Close 清理资源
@@ -231,7 +232,16 @@ func newKafka(c Config) *kmq {
 			time.Sleep(time.Second)
 			continue
 		}
-
+		defer conn.Close()
+		// 通过该连接找到集群领导
+		leader, err := conn.Controller()
+		if err != nil {
+			panic(err.Error())
+		}
+		leaderConn, err := kafka.Dial("tcp", net.JoinHostPort(leader.Host, strconv.Itoa(leader.Port)))
+		if err != nil {
+			log.Fatalf("获取领导节点失败")
+		}
 		// 集群地址
 		var address = make([]string, 0)
 		for _, v := range c.Address {
@@ -239,7 +249,7 @@ func newKafka(c Config) *kmq {
 			address = append(address, str)
 		}
 		return &kmq{
-			conn:    conn,
+			leader:  leaderConn,
 			config:  c,
 			address: address,
 		}
