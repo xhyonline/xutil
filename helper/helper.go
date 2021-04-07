@@ -253,7 +253,7 @@ func GetRandom(num int) int {
 	return x
 }
 
-// md5加密
+// md5
 func Md5(str string) string {
 	Md5Inst := md5.New()
 	_, _ = Md5Inst.Write([]byte(str))
@@ -261,7 +261,7 @@ func Md5(str string) string {
 	return fmt.Sprintf("%x", Result)
 }
 
-// sha1加密
+// sha1
 func Sha1(str string) string {
 	Sha1Inst := sha1.New()
 	_, _ = Sha1Inst.Write([]byte(str))
@@ -280,6 +280,20 @@ func HashCode(s string) int {
 	}
 	// v == MinInt
 	return v
+}
+
+// InArray 是否在数组内
+func InArray(val, array interface{}) bool {
+	if reflect.TypeOf(array).Kind() == reflect.Slice {
+		s := reflect.ValueOf(array)
+
+		for i := 0; i < s.Len(); i++ {
+			if reflect.DeepEqual(val, s.Index(i).Interface()) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // CleanStruct 清洗结构体中的每一个字段,当且结构体字段的值 与 old 全等时才会替换
@@ -372,6 +386,9 @@ var validProvince = []string{
 
 // IsValidCitizenNo 校验是否是有效的身份证号码
 func IsValidCitizenNo(citizenNo *[]byte) bool {
+	if citizenNo == nil || *citizenNo == nil {
+		return false
+	}
 	nLen := len(*citizenNo)
 	if nLen != 15 && nLen != 18 {
 		return false
@@ -396,7 +413,7 @@ func IsValidCitizenNo(citizenNo *[]byte) bool {
 
 	if nLen == 15 {
 		*citizenNo = Citizen15To18(*citizenNo)
-		if citizenNo == nil {
+		if *citizenNo == nil {
 			return false
 		}
 	} else if !IsValidCitizenNo18(citizenNo) {

@@ -3,9 +3,9 @@ package db
 import (
 	"time"
 
-	"github.com/jinzhu/gorm"
-	_ "github.com/jinzhu/gorm/dialects/mysql"
 	"github.com/xhyonline/xutil/xlog"
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
 )
 
 var log = xlog.Get(false)
@@ -31,17 +31,23 @@ func NewDataBase(c *Config) *gorm.DB {
 	var db *gorm.DB
 	var err error
 	for {
-		db, err = gorm.Open("mysql", c.User+":"+c.Password+
+		db, err = gorm.Open(mysql.Open(c.User+":"+c.Password+
 			"@tcp("+c.Host+":"+c.Port+")/"+c.Name+
-			"?charset=utf8mb4&parseTime=True&loc=Local&timeout=90s")
+			"?charset=utf8mb4&parseTime=True&loc=Local&timeout=90s"), &gorm.Config{})
 		if err != nil {
 			log.WithError(err).Warn("waiting for connect to db")
 			time.Sleep(time.Second * 2)
 			continue
 		}
-		db.DB().SetConnMaxLifetime(time.Duration(c.Lifetime) * time.Second)
-		db.DB().SetMaxOpenConns(c.MaxActiveConn)
-		db.DB().SetMaxIdleConns(c.MaxIdleConn)
+		dbs, err := db.DB()
+		if err != nil {
+			log.WithError(err).Warn("waiting for connect to db")
+			time.Sleep(time.Second * 2)
+			continue
+		}
+		dbs.SetConnMaxLifetime(time.Duration(c.Lifetime) * time.Second)
+		dbs.SetMaxOpenConns(c.MaxActiveConn)
+		dbs.SetMaxIdleConns(c.MaxIdleConn)
 		log.Info("Mysql connect successful.")
 		break
 	}
