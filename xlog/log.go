@@ -86,6 +86,7 @@ func Get(isDebug bool, path ...string) *MyLogger {
 		logger.SetFormatter(&logrus.TextFormatter{
 			DisableColors: true,
 		})
+		logger.SetOutput(os.Stdout) // 错误为标准输出
 		// 开启行号
 		logger.SetReportCaller(true)
 	}
