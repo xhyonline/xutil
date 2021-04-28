@@ -12,8 +12,8 @@ type Config struct {
 	Port int
 }
 
-// Validate 基本验证
-func (c Config) Validate() bool {
+// validate 基本验证
+func (c Config) validate() bool {
 	return c.User != "" && c.Pass != "" && c.Host != "" && c.Port != 0
 }
 
@@ -45,7 +45,7 @@ func (m *Mail) Send(subject, from, body string, toUser ...string) error {
 //		Port: 465,
 //	})
 func NewMail(c Config) *Mail {
-	if !c.Validate() {
+	if !c.validate() {
 		return nil
 	}
 	m := gomail.NewMessage()
