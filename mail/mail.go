@@ -6,10 +6,10 @@ import "gopkg.in/gomail.v2"
 
 // Config 定义实例
 type Config struct {
-	User string
-	Pass string
-	Host string
-	Port int
+	User string `toml:"user"`
+	Pass string `toml:"pass"`
+	Host string `toml:"host"`
+	Port int    `toml:"port"`
 }
 
 // validate 基本验证
