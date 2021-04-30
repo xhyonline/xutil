@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/tls"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -93,4 +94,29 @@ func HTTPFormRequest(url, method string, v url.Values, header http.Header) ([]by
 		return nil, err
 	}
 	return body, nil
+}
+
+// HTTPRequest HTTP 请求
+func HTTPRequest(url, method string, header http.Header, body io.Reader, times int) ([]byte, error) {
+	r, err := http.NewRequest(method, url, body)
+	if err != nil {
+		return nil, nil
+	}
+	// 重试机制
+	client := &http.Client{}
+	count := 0
+	for times != count {
+		resp, err := client.Do(r)
+		if err != nil {
+			count++
+			continue
+		}
+		defer resp.Body.Close()
+		b, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return nil, err
+		}
+		return b, nil
+	}
+	return nil, fmt.Errorf("超过重试次数")
 }
