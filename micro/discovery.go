@@ -2,10 +2,14 @@ package micro
 
 import (
 	"encoding/json"
+	"strings"
+
+	"github.com/xhyonline/xutil/helper"
 
 	"sync"
 
 	"context"
+
 	"github.com/coreos/etcd/mvcc/mvccpb"
 	"go.etcd.io/etcd/clientv3"
 )
@@ -13,7 +17,7 @@ import (
 // MicroMicroServiceDiscovery 微服务发现实例
 type MicroMicroServiceDiscovery struct {
 	// etcd 服务实例
-	client *clientv3.Client
+	Client *clientv3.Client
 	// etcd 前缀
 	prefix string
 	// 各服务节点, Key 为服务名 val 为节点
@@ -24,9 +28,10 @@ type MicroMicroServiceDiscovery struct {
 
 // NewMicroServiceDiscovery 实例化一个服务发现实例
 func NewMicroServiceDiscovery(client *clientv3.Client, prefix string) *MicroMicroServiceDiscovery {
+
 	return &MicroMicroServiceDiscovery{
-		client: client,
-		prefix: prefix,
+		Client: client,
+		prefix: "/" + strings.Trim(prefix, "/") + "/",
 		nodes:  make(map[string][]*Node),
 		lock:   sync.RWMutex{},
 	}
@@ -35,7 +40,8 @@ func NewMicroServiceDiscovery(client *clientv3.Client, prefix string) *MicroMicr
 // Watch 监听事件
 func (s *MicroMicroServiceDiscovery) Watch() error {
 	// 先获取先前前缀下的所有服务
-	kv := clientv3.KV(s.client)
+	kv := clientv3.KV(s.Client)
+	logger.Info("服务发现开始监听前缀为:" + s.prefix)
 	getResp, err := kv.Get(context.Background(), s.prefix, clientv3.WithPrefix())
 	if err != nil {
 		return err
@@ -45,14 +51,15 @@ func (s *MicroMicroServiceDiscovery) Watch() error {
 	for _, item := range getResp.Kvs {
 		err = s.addService(item.Key, item.Value)
 		if err != nil {
-			return err
+			logger.Warnf("发现不合规的节点key:%s value:", string(item.Key), string(item.Value))
+			continue
 		}
 	}
 	s.lock.Unlock()
 
 	// 开始正式监听
 
-	watcher := clientv3.NewWatcher(s.client)
+	watcher := clientv3.NewWatcher(s.Client)
 
 	defer watcher.Close()
 	// 从 getResp.Header.Revision+1 开始,监听后续所有的以 s.prefix 前缀开头的 key 事件
@@ -79,6 +86,9 @@ func (s *MicroMicroServiceDiscovery) Watch() error {
 
 // addService 新增服务
 func (s *MicroMicroServiceDiscovery) addService(key, value []byte) error {
+	// 获取服务名
+	name := s.getServerName(key)
+
 	node := new(Node)
 	if err := json.Unmarshal(value, node); err != nil {
 		return err
@@ -86,32 +96,55 @@ func (s *MicroMicroServiceDiscovery) addService(key, value []byte) error {
 	if err := node.Validate(); err != nil {
 		return err
 	}
-	nodes, ok := s.nodes[string(key)]
+	nodes, ok := s.nodes[name]
 	if !ok {
 		nodes = make([]*Node, 0)
 	}
-	nodes = append(nodes, node)
+	s.nodes[name] = append(nodes, node)
 	return nil
 }
 
 // removeService 删除服务
 func (s *MicroMicroServiceDiscovery) removeService(key []byte) {
-	nodes,ok:=s.nodes[string(key)]
+	name := s.getServerName(key)
+	nodes, ok := s.nodes[name]
 	if !ok {
 		return
 	}
-	//if len(nodes)==1 && nodes[0].Port== {
-	//
-	//}
-	delete(s.nodes, string(key))
+	address := s.getNodeByKey(key)
+	for k, node := range nodes {
+		if node.Host == address.Host && node.Port == address.Port {
+			nodes = append(nodes[0:k], nodes[k+1:]...)
+			break
+		}
+	}
+	if len(nodes) == 0 {
+		delete(s.nodes, name)
+		return
+	}
+	s.nodes[name] = nodes
 }
 
 // GetService 获取服务
 func (s *MicroMicroServiceDiscovery) GetService(name string) *Node {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
-	if v, ok := s.nodes[name]; ok {
-		return v
+	if nodes, ok := s.nodes[name]; ok {
+		return nodes[helper.GetRandom(len(nodes))]
 	}
 	return nil
+}
+
+// getServerName 根据规则获取服务名
+func (s *MicroMicroServiceDiscovery) getServerName(key []byte) string {
+	return strings.Split(strings.Replace(string(key), s.prefix, "", 1), "/")[0]
+}
+
+// getNodeByKey 通过 key 获取节点
+func (s *MicroMicroServiceDiscovery) getNodeByKey(key []byte) Node {
+	result := strings.Split(strings.Split(strings.Replace(string(key), s.prefix, "", 1), "/")[1], ":")
+	return Node{
+		Host: result[0],
+		Port: result[1],
+	}
 }
