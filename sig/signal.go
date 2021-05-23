@@ -23,13 +23,13 @@ type signalInstance struct {
 	// 方法集合
 	funcArr []Func
 	// 退出信号
-	closed chan struct{}
+	closed chan os.Signal
 	// 系统信号
 	signalChan chan os.Signal
 }
 
 // GracefulClose 注册关闭方法
-func (s *signalInstance) RegisterClose(f Func) <-chan struct{} {
+func (s *signalInstance) RegisterClose(f Func) <-chan os.Signal {
 	server.funcArr = append(server.funcArr, f)
 	return server.closed
 }
@@ -39,7 +39,7 @@ func Get() *signalInstance {
 	once.Do(func() {
 		server = &signalInstance{
 			funcArr:    make([]Func, 0),
-			closed:     make(chan struct{}, 1),
+			closed:     make(chan os.Signal),
 			signalChan: make(chan os.Signal),
 		}
 		go func() {
@@ -50,7 +50,7 @@ func Get() *signalInstance {
 				for _, f := range server.funcArr {
 					f.GracefulClose()
 				}
-				server.closed <- struct{}{}
+				server.closed <- sig
 			}
 		}()
 	})
