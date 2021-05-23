@@ -26,6 +26,8 @@ type Client interface {
 	GetTopics() ([]string, error)
 	// 删除主题
 	RemoveTopics(topics ...string) error
+	// 创建消费者组
+	CreateGroup(name string, topics ...string) error
 	// 清理网络资源
 	Close()
 }
