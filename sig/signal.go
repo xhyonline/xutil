@@ -13,7 +13,8 @@ type Func interface {
 }
 
 // RegisterOnClose 注册关闭方法
-func RegisterOnClose(f Func) {
+func RegisterOnClose(f Func) <-chan struct{} {
+	closed := make(chan struct{})
 	go func() {
 		c := make(chan os.Signal)
 		signal.Notify(c, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
@@ -21,8 +22,8 @@ func RegisterOnClose(f Func) {
 		switch sig {
 		case syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT:
 			f.GracefulClose()
-		default:
-			break
+			closed <- struct{}{}
 		}
 	}()
+	return closed
 }

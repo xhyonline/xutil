@@ -19,6 +19,6 @@ func (s *c) GracefulClose() {
 
 func main() {
 	s := new(c)
-	sig.RegisterOnClose(s)
-	select {}
+	closed := sig.RegisterOnClose(s)
+	<-closed
 }
