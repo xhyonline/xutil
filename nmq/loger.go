@@ -1,4 +1,4 @@
-package mq
+package nmq
 
 import (
 	"strings"
