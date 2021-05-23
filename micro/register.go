@@ -3,10 +3,7 @@ package micro
 import (
 	"context"
 	"encoding/json"
-	"os"
-	"os/signal"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/xhyonline/xutil/sig"
@@ -34,8 +31,6 @@ func NewMicroServiceRegister(client *clientv3.Client, prefix string, lease int64
 		lease = 10
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	signalChan := make(chan os.Signal, 1)
-	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
 	register := &MicroServiceRegister{
 		client:     client,
 		prefix:     "/" + strings.Trim(prefix, "/") + "/",

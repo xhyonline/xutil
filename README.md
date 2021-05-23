@@ -12,9 +12,17 @@ Redis 封装
 mysql 封装
 ### 五、model 包
 gorm 相关封装
-### 六、mq 包
+### 六、nmq 包
 NSQ 封装
 ### 七、xlog 包
 日志封装
-### 八、shell
+### 八、shell 包
 shell 命令封装
+### 九、micro包
+服务发现和服务注册组件
+### 十、mail包
+邮件发送包
+### 十一、etcd包
+etcd 客户端
+### 十二、sig包
+程序优雅退出方法注册封装
