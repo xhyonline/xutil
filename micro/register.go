@@ -9,6 +9,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/xhyonline/xutil/sig"
+
 	"go.etcd.io/etcd/clientv3"
 )
 
@@ -20,8 +22,6 @@ type MicroServiceRegister struct {
 	prefix string
 	// 租约时间
 	lease int64
-	// 退出信号通道
-	signalChan chan os.Signal
 	// 全员信号
 	ctx context.Context
 	// 取消方法
@@ -40,24 +40,21 @@ func NewMicroServiceRegister(client *clientv3.Client, prefix string, lease int64
 		client:     client,
 		prefix:     "/" + strings.Trim(prefix, "/") + "/",
 		lease:      lease,
-		signalChan: signalChan,
 		ctx:        ctx,
 		cancelFunc: cancel,
 	}
-	// 监听系统信号
-	go register.listenOsSignal()
+	// 优雅退出
+	sig.Get().RegisterClose(register)
 	return register
 }
 
-// listenOsSignal 监听系统信号
-func (s *MicroServiceRegister) listenOsSignal() {
-	<-s.signalChan
+// GracefulClose 优雅退出
+func (s *MicroServiceRegister) GracefulClose() {
 	logger.Info("服务发现组件正在准备做退出的清理工作")
 	s.cancelFunc()
 	time.Sleep(time.Second * 5)
 	defer s.client.Close()
 	logger.Info("服务发现组件清理工作已完成")
-
 }
 
 // Register 注册服务
