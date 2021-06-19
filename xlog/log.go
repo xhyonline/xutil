@@ -57,7 +57,6 @@ func stringFromAssertionFloat(number interface{}) string {
 		numberString = strconv.FormatInt(floatOriginal, 10)
 	case []uint8:
 		numberString = string(floatOriginal)
-		break
 	case string:
 		numberString = "'" + floatOriginal + "'"
 	case bool:
@@ -74,7 +73,12 @@ func Get(isDebug bool, path ...string) *MyLogger {
 	if logger == nil {
 		logger = new(MyLogger)
 		logger.Logger = logrus.New()
+		// info 级别以下的都不输出
 		logger.SetLevel(logrus.InfoLevel)
+		// 开启行号
+		logger.SetReportCaller(true)
+		// 日志格式化
+		logger.SetFormatter(&formatter{})
 	}
 	switch {
 	// 当且不是 Debug 状态下才会将日志追加到 log 文件中 ,讲道理 debug 的状态下直接输出在屏幕,谁还看日志啊......
@@ -83,12 +87,7 @@ func Get(isDebug bool, path ...string) *MyLogger {
 		logger.SetOutput(logfile) //默认为os.stderr
 	// 如果是 debug 或者是生产环境下没有设置日志的路径,也打在屏幕上
 	default:
-		logger.SetFormatter(&logrus.TextFormatter{
-			DisableColors: true,
-		})
 		logger.SetOutput(os.Stdout) // 错误为标准输出
-		// 开启行号
-		logger.SetReportCaller(true)
 	}
 	return logger
 }
