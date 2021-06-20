@@ -8,7 +8,7 @@ import (
 	"gorm.io/gorm"
 )
 
-var log = xlog.Get(false)
+var log = xlog.Get().Debug()
 
 // Config 数据库配置
 type Config struct {

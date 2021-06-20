@@ -6,7 +6,7 @@ import (
 	"github.com/xhyonline/xutil/xlog"
 )
 
-var logger = xlog.Get(true)
+var logger = xlog.Get().Debug()
 
 // Node 服务节点
 type Node struct {

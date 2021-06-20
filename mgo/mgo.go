@@ -9,7 +9,7 @@ import (
 	"gopkg.in/mgo.v2"
 )
 
-var log = xlog.Get(true)
+var log = xlog.Get().Debug()
 
 type Config struct {
 	Database string // 数据库

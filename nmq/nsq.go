@@ -11,7 +11,7 @@ import (
 	"github.com/xhyonline/xutil/xlog"
 )
 
-var log = xlog.Get(true)
+var log = xlog.Get().Debug()
 
 // NSQ context
 type nsqContext struct {

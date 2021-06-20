@@ -31,7 +31,6 @@ func (m *formatter) Format(entry *logrus.Entry) ([]byte, error) {
 		Level:     entry.Level,
 		Func:      entry.Caller.Function,
 	})
-
 	buffer.WriteString(string(body) + "\n")
 	return buffer.Bytes(), nil
 }

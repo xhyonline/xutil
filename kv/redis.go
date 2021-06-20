@@ -14,7 +14,7 @@ import (
 	"github.com/xhyonline/xutil/xlog"
 )
 
-var log = xlog.Get(false)
+var log = xlog.Get().Debug()
 
 // Config 数据库配置，可以被主配置直接引用
 type Config struct {

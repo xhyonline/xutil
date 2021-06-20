@@ -5,6 +5,9 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
+
+	rotatelogs "github.com/lestrrat-go/file-rotatelogs"
 
 	"github.com/sirupsen/logrus"
 )
@@ -20,7 +23,7 @@ type MyLogger struct {
 // 	使用示例:
 // 	var log = xlog.Get(false, "./log.log")
 //	*gorm.DB.SetLogger(log)
-//	*gorm.DB.LogMode(true)
+//  *gorm.DB.LogMode(true)
 func (logger *MyLogger) Print(values ...interface{}) {
 	if values[0] != "sql" {
 		return
@@ -39,6 +42,42 @@ func (logger *MyLogger) Print(values ...interface{}) {
 		sqlString = strings.Replace(sqlString, "?", stringFromAssertionFloat(v), 1)
 	}
 	logger.Info(sqlString)
+}
+
+// XHook 钩子方法,可以到处触发
+func (logger *MyLogger) XHook(do func(entry *logrus.Entry) error, level ...logrus.Level) {
+	logger.AddHook(&Hook{
+		Do:    do,
+		Level: level,
+	})
+}
+
+// Debug 模式
+func (logger *MyLogger) Debug() *MyLogger {
+	logger.SetOutput(os.Stdout)
+	return logger
+}
+
+// Product 生产模式
+// 参数:split 是否开启日志分割
+func (logger *MyLogger) Product(path string, split bool) *MyLogger {
+	if !split {
+		logfile, _ := os.OpenFile(path, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0644)
+		logger.SetOutput(logfile) //默认为os.stderr
+		return logger
+	}
+	writer, _ := rotatelogs.New(
+		path+"_%Y%m%d%H",
+		// WithLinkName, // 为最新的日志建立软连接
+		// WithRotationCount //设置文件清理前最多保存的个数
+		// WithMaxAge 和 WithRotationCount二者只能设置一个
+		// 设置文件清理前的最长保存时间,一天后自动删除 (注:最小单位分钟)
+		rotatelogs.WithMaxAge(time.Hour*24),
+		// 设置日志分割的时间，每一个小时分割一次
+		rotatelogs.WithRotationTime(time.Hour),
+	)
+	logger.SetOutput(writer)
+	return logger
 }
 
 // stringFromAssertionFloat 断言浮动的字符串
@@ -69,7 +108,7 @@ func stringFromAssertionFloat(number interface{}) string {
 // 参数:
 // 		isDebug 是否为调试模式,调试模式日志只会打印在终端,如果想要配合追加日志路径,请填写为 false
 // 		path 日志路径
-func Get(isDebug bool, path ...string) *MyLogger {
+func Get() *MyLogger {
 	if logger == nil {
 		logger = new(MyLogger)
 		logger.Logger = logrus.New()
@@ -79,15 +118,6 @@ func Get(isDebug bool, path ...string) *MyLogger {
 		logger.SetReportCaller(true)
 		// 日志格式化
 		logger.SetFormatter(&formatter{})
-	}
-	switch {
-	// 当且不是 Debug 状态下才会将日志追加到 log 文件中 ,讲道理 debug 的状态下直接输出在屏幕,谁还看日志啊......
-	case len(path) != 0 && !isDebug:
-		logfile, _ := os.OpenFile(path[0], os.O_CREATE|os.O_RDWR|os.O_APPEND, 0644)
-		logger.SetOutput(logfile) //默认为os.stderr
-	// 如果是 debug 或者是生产环境下没有设置日志的路径,也打在屏幕上
-	default:
-		logger.SetOutput(os.Stdout) // 错误为标准输出
 	}
 	return logger
 }
