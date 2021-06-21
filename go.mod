@@ -2,6 +2,12 @@ module github.com/xhyonline/xutil
 
 go 1.13
 
+
+replace github.com/coreos/bbolt => go.etcd.io/bbolt v1.3.4
+
+replace google.golang.org/grpc v1.38.0 => google.golang.org/grpc v1.26.0
+
+
 require (
 	github.com/coreos/bbolt v0.0.0-00010101000000-000000000000 // indirect
 	github.com/coreos/etcd v3.3.25+incompatible
@@ -56,7 +62,3 @@ require (
 	gorm.io/gorm v1.21.6
 	sigs.k8s.io/yaml v1.2.0 // indirect
 )
-
-replace github.com/coreos/bbolt => go.etcd.io/bbolt v1.3.4
-
-replace google.golang.org/grpc v1.38.0 => google.golang.org/grpc v1.26.0
