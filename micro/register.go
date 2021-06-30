@@ -39,7 +39,10 @@ func NewMicroServiceRegister(client *clientv3.Client, prefix string, lease int64
 		cancelFunc: cancel,
 	}
 	// 优雅退出
-	sig.Get().RegisterClose(register)
+	go func() {
+		<-sig.Get().RegisterClose(register).Done()
+		logger.Infof("服务发现组件清理工作已优雅退出")
+	}()
 	return register
 }
 

@@ -16,7 +16,7 @@ import (
 	"github.com/xhyonline/xutil/xlog"
 )
 
-var log = xlog.Get().Debug()
+var log = xlog.Get().Debugger()
 
 // consumerAttr 消费者属性
 type consumerAttr struct {

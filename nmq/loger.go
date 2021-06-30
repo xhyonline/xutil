@@ -18,13 +18,13 @@ var (
 // standard logrus logger.
 type LogrusLogger struct{}
 
-// NewLogrusLogger returns a new LogrusLogger and the current log level.
+// NewLogrusLogger returns a new LogrusLogger and the current logger level.
 // This is a format to easily plug into nsq.SetLogger.
-func NewLogrusLogger() (logger LogrusLogger, level nsq.LogLevel) {
-	return NewLogrusLoggerAtLevel(log.GetLevel())
+func NewLogrusLogger() (LogrusLogger, nsq.LogLevel) {
+	return NewLogrusLoggerAtLevel(logger.GetLevel())
 }
 
-// NewLogrusLoggerAtLevel returns a new LogrusLogger with the provided log level mapped to nsq.LogLevel for easily plugging into nsq.SetLogger.
+// NewLogrusLoggerAtLevel returns a new LogrusLogger with the provided logger level mapped to nsq.LogLevel for easily plugging into nsq.SetLogger.
 func NewLogrusLoggerAtLevel(l logrus.Level) (logger LogrusLogger, level nsq.LogLevel) {
 	logger = LogrusLogger{}
 	level = nsq.LogLevelWarning
@@ -41,22 +41,22 @@ func NewLogrusLoggerAtLevel(l logrus.Level) (logger LogrusLogger, level nsq.LogL
 	return
 }
 
-// Output implements stdlib log.Logger.Output using logrus
-// Decodes the go-nsq log messages to figure out the log level
+// Output implements stdlib logger.Logger.Output using logrus
+// Decodes the go-nsq logger messages to figure out the logger level
 func (n LogrusLogger) Output(_ int, s string) error {
 	if len(s) > 3 {
 		msg := strings.TrimSpace(s[3:])
 		switch s[:3] {
 		case nsqDebugLevel:
-			log.Debug(msg)
+			logger.Debug(msg)
 		case nsqInfoLevel:
-			log.Info(msg)
+			logger.Info(msg)
 		case nsqWarnLevel:
-			log.Warn(msg)
+			logger.Warn(msg)
 		case nsqErrLevel:
-			log.Error(msg)
+			logger.Error(msg)
 		default:
-			log.Info(msg)
+			logger.Info(msg)
 		}
 	}
 	return nil

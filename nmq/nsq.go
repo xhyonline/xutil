@@ -11,7 +11,7 @@ import (
 	"github.com/xhyonline/xutil/xlog"
 )
 
-var log = xlog.Get().Debug()
+var logger = xlog.Get().Debugger()
 
 // NSQ context
 type nsqContext struct {
@@ -55,7 +55,7 @@ func newNSQClient(config Config) Client {
 		logrus.WithError(err).Panic("init nsq producer failed")
 	}
 	c.producer.SetLogger(NewLogrusLoggerAtLevel(logrus.WarnLevel))
-	log.Info("NSQ Producer 初始化完成。")
+	logger.Info("NSQ Producer 初始化完成。")
 	c.consumers = make([]*nsq.Consumer, 0)
 	return c
 }
@@ -74,16 +74,16 @@ func decorate(f HandlerFunc) nsq.HandlerFunc {
 func (c *nsqClient) Sub(topic, channel string, handler HandlerFunc) {
 	q, err := nsq.NewConsumer(topic, channel, nsq.NewConfig())
 	if err != nil {
-		log.WithError(err).Panic("init nsq consumer failed")
+		logger.WithError(err).Panic("init nsq consumer failed")
 	}
 	c.consumers = append(c.consumers, q)
 	q.AddHandler(decorate(handler))
 	q.SetLogger(NewLogrusLoggerAtLevel(logrus.WarnLevel))
 	err = q.ConnectToNSQLookupd(c.config.SubHost + ":" + c.config.SubHTTP)
 	if err != nil {
-		log.WithError(err).Panic("nsq consumer connect to lookupd failed")
+		logger.WithError(err).Panic("nsq consumer connect to lookupd failed")
 	}
-	log.Infof("订阅 nsq topic %s by %s", topic, channel)
+	logger.Infof("订阅 nsq topic %s by %s", topic, channel)
 }
 
 // Pub 发布消息，用json编码
@@ -110,10 +110,10 @@ func (c *nsqClient) CreateTopic(topic string) error {
 	_, err := grequests.Post("http://"+c.config.PubHost+":"+c.config.PubHTTP+"/topic/create",
 		&grequests.RequestOptions{Params: map[string]string{"topic": topic}})
 	if err != nil {
-		log.WithError(err).Errorf("创建主题 %s 出错", topic)
+		logger.WithError(err).Errorf("创建主题 %s 出错", topic)
 		return err
 	}
-	log.Infof("创建主题 %s 成功", topic)
+	logger.Infof("创建主题 %s 成功", topic)
 	return nil
 }
 

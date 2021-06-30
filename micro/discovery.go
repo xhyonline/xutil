@@ -83,7 +83,6 @@ func (s *MicroMicroServiceDiscovery) watch() {
 			s.lock.Unlock()
 		}
 	}
-	return
 }
 
 // addService 新增服务

@@ -52,8 +52,8 @@ func (logger *MyLogger) XHook(do func(entry *logrus.Entry) error, level ...logru
 	})
 }
 
-// Debug 模式
-func (logger *MyLogger) Debug() *MyLogger {
+// Debugger 模式
+func (logger *MyLogger) Debugger() *MyLogger {
 	logger.SetOutput(os.Stdout)
 	return logger
 }

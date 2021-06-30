@@ -3,6 +3,7 @@
 package sig
 
 import (
+	"context"
 	"os"
 	"os/signal"
 	"sync"
@@ -22,26 +23,31 @@ type Func interface {
 type signalInstance struct {
 	// 方法集合
 	funcArr []Func
-	// 退出信号
-	closed chan os.Signal
 	// 系统信号
 	signalChan chan os.Signal
+	// 取消信号
+	context context.Context
+	// 取消方法
+	cancelFunc context.CancelFunc
 }
 
 // GracefulClose 注册关闭方法
-func (s *signalInstance) RegisterClose(f Func) <-chan os.Signal {
+func (s *signalInstance) RegisterClose(f Func) context.Context {
 	server.funcArr = append(server.funcArr, f)
-	return server.closed
+	return server.context
 }
 
 // Get 获取单例
 func Get() *signalInstance {
 	once.Do(func() {
+		ctx, cancel := context.WithCancel(context.Background())
 		server = &signalInstance{
 			funcArr:    make([]Func, 0),
-			closed:     make(chan os.Signal),
 			signalChan: make(chan os.Signal),
+			context:    ctx,
+			cancelFunc: cancel,
 		}
+
 		go func() {
 			signal.Notify(server.signalChan, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 			sig := <-server.signalChan
@@ -50,7 +56,7 @@ func Get() *signalInstance {
 				for _, f := range server.funcArr {
 					f.GracefulClose()
 				}
-				server.closed <- sig
+				server.cancelFunc()
 			}
 		}()
 	})
