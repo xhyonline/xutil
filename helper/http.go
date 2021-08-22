@@ -25,9 +25,11 @@ func HTTPJsonRequest(url, method string, body []byte, header http.Header) ([]byt
 	// 证书信任
 	c := new(http.Client)
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		TLSClientConfig:   &tls.Config{InsecureSkipVerify: true},
+		DisableKeepAlives: true,
 	}
 	c.Transport = tr
+	c.Timeout = time.Second * 10
 	r, err := http.NewRequest(method, url, bytes.NewReader(body))
 	if err != nil {
 		return nil, err
@@ -61,8 +63,10 @@ func HTTPFormRequest(url, method string, v url.Values, header http.Header) ([]by
 	// 证书信任
 	c := new(http.Client)
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		TLSClientConfig:   &tls.Config{InsecureSkipVerify: true},
+		DisableKeepAlives: true,
 	}
+	c.Timeout = time.Second * 10
 	c.Transport = tr
 	var (
 		r   *http.Request
