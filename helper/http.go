@@ -2,6 +2,7 @@ package helper
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"fmt"
 	"io"
@@ -9,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 )
 
 // HTTPJsonRequest Json 请求体添加 json
@@ -98,21 +100,26 @@ func HTTPFormRequest(url, method string, v url.Values, header http.Header) ([]by
 
 // HTTPRequest HTTP 请求
 func HTTPRequest(url, method string, header http.Header, body io.Reader) ([]byte, error) {
-	r, err := http.NewRequest(method, url, body)
+	// validate
+	if url == "" || method == "" || header == nil {
+		return nil, fmt.Errorf("请检查请求参数")
+	}
+	method = strings.ToUpper(method)
+	client := new(http.Client)
+	tr := &http.Transport{
+		DisableKeepAlives: true,
+	}
+	client.Transport = tr
+	client.Timeout = time.Second * 10
+	r, err := http.NewRequestWithContext(context.Background(), method, url, body)
 	if err != nil {
-		return nil, nil
+		return nil, err
 	}
 	r.Header = header
-	// 重试机制
-	client := &http.Client{}
 	resp, err := client.Do(r)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
-	b, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-	return b, nil
+	return ioutil.ReadAll(resp.Body)
 }
