@@ -6,6 +6,7 @@ import (
 	"crypto/md5"
 	"crypto/sha1"
 	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"hash/crc32"
@@ -255,18 +256,16 @@ func GetRandom(num int) int {
 
 // md5
 func Md5(str string) string {
-	Md5Inst := md5.New()
-	_, _ = Md5Inst.Write([]byte(str))
-	Result := Md5Inst.Sum([]byte(""))
-	return fmt.Sprintf("%x", Result)
+	md5Inst := md5.New()
+	_, _ = md5Inst.Write([]byte(str))
+	return hex.EncodeToString(md5Inst.Sum([]byte("")))
 }
 
 // sha1
 func Sha1(str string) string {
-	Sha1Inst := sha1.New()
-	_, _ = Sha1Inst.Write([]byte(str))
-	Result := Sha1Inst.Sum([]byte(""))
-	return fmt.Sprintf("%x\n\n", Result)
+	sha1Inst := sha1.New()
+	_, _ = sha1Inst.Write([]byte(str))
+	return hex.EncodeToString(sha1Inst.Sum([]byte("")))
 }
 
 // 字符串转换为hash数字
@@ -280,6 +279,17 @@ func HashCode(s string) int {
 	}
 	// v == MinInt
 	return v
+}
+
+// HashCodeMd5 MD5 转数字
+func HashCodeMd5(s string) int {
+	byteHash := Md5(s)
+	h := 0
+	for i := 0; i < 32; i++ {
+		h <<= 8
+		h |= int(byteHash[i]) & 0xFF
+	}
+	return h
 }
 
 // InArray 是否在数组内
