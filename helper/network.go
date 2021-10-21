@@ -8,8 +8,8 @@ import (
 )
 
 // IntranetAddress 获取内网地址
-func IntranetAddress() (map[string]net.IP, error) {
-	ips := make(map[string]net.IP)
+func IntranetAddress() (map[string][]net.IP, error) {
+	ips := make(map[string][]net.IP)
 
 	interfaces, err := net.Interfaces()
 	if err != nil {
@@ -28,7 +28,7 @@ func IntranetAddress() (map[string]net.IP, error) {
 		for _, v := range addresses {
 			ipString := strings.Split(v.String(), "/")[0]
 			if ip := net.ParseIP(ipString); ip != nil {
-				ips[byName.Name] = ip
+				ips[byName.Name] = append(ips[byName.Name], ip)
 				continue
 			}
 			return nil, fmt.Errorf("ip 地址解析失败 %s", v.String())
