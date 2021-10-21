@@ -6,15 +6,15 @@ import (
 	"C"
 	"time"
 
+	"github.com/prometheus/common/log"
+	"github.com/xhyonline/xutil/logger"
+
 	"github.com/vmihailenco/msgpack/v4"
 	"github.com/xhyonline/xutil/xtype"
 
 	"github.com/go-redis/cache/v7"
 	"github.com/go-redis/redis/v7"
-	"github.com/xhyonline/xutil/xlog"
 )
-
-var log = xlog.Get().Debugger()
 
 // Config 数据库配置，可以被主配置直接引用
 type Config struct {
@@ -163,7 +163,7 @@ func (c *RClient) Delete(key string) {
 	if err == cache.ErrCacheMiss {
 		return
 	} else if err != nil {
-		log.WithError(err).WithField("key", key).Error("delete cache failed")
+		logger.Errorf("key %s delete cache failed", key)
 	}
 }
 
@@ -182,7 +182,7 @@ func (c *RClient) Clean(cate string) {
 	for _, key := range c.Kv.Keys(cate + "*").Val() {
 		err := c.codec.Delete(key)
 		if err != nil {
-			log.WithError(err).WithField("key", key).Error("delete cache failed,stop batch delete")
+			logger.Errorf("key %s delete cache failed,stop batch delete", key)
 			break
 		}
 		i++

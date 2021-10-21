@@ -4,12 +4,11 @@ package mgo
 import (
 	"time"
 
-	"github.com/xhyonline/xutil/xlog"
+	"github.com/prometheus/common/log"
+	"github.com/xhyonline/xutil/logger"
 
 	"gopkg.in/mgo.v2"
 )
-
-var log = xlog.Get().Debugger()
 
 type Config struct {
 	Database string // 数据库
@@ -37,7 +36,7 @@ func New(config Config) (*mgo.Database, error) {
 		}
 		break
 	}
-	log.Info("Mongo Connect Success......")
+	logger.Info("Mongo Connect Success......")
 	// 当账号密码不为空时
 	// 登录 MongoDB
 	if config.User != "" || config.Password != "" {

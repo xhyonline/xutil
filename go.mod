@@ -34,8 +34,9 @@ require (
 	github.com/nsqio/go-nsq v1.0.8
 	github.com/onsi/ginkgo v1.12.0 // indirect
 	github.com/prometheus/client_golang v1.11.0 // indirect
+	github.com/prometheus/common v0.26.0
 	github.com/rs/xid v1.2.1
-	github.com/segmentio/kafka-go v0.4.9
+	github.com/segmentio/kafka-go v0.4.22
 	github.com/sirupsen/logrus v1.6.0
 	github.com/soheilhy/cmux v0.1.5 // indirect
 	github.com/tmc/grpc-websocket-proxy v0.0.0-20201229170055-e5319fda7802 // indirect

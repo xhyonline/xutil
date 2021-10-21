@@ -10,13 +10,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/xhyonline/xutil/logger"
+
 	"context"
 
 	"github.com/segmentio/kafka-go"
-	"github.com/xhyonline/xutil/xlog"
 )
-
-var log = xlog.Get().Debugger()
 
 // consumerAttr 消费者属性
 type consumerAttr struct {
@@ -209,12 +208,12 @@ func handler(r *kafka.Reader, handlerFunc HandlerFunc) {
 	for {
 		m, err := r.ReadMessage(context.Background())
 		if err != nil {
-			log.Fatalf("kafka 读取数据时发生错误 %s", err)
+			logger.Errorf("kafka 读取数据时发生错误 %s", err)
 		}
 
 		err = handlerFunc(&ctx{msg: m})
 		if err != nil {
-			log.Fatalf("%s", err)
+			logger.Errorf("%s", err)
 		}
 	}
 }
@@ -228,7 +227,7 @@ func newKafka(c Config) *kmq {
 		// 主题 A 的分区在 1、2 服务器上,但是如果我们连接 0 号服务器,也能获取到该主题的基本信息
 		conn, err := kafka.Dial("tcp", c.Address[0].Host+":"+c.Address[0].Port)
 		if err != nil {
-			log.Errorf("kafka 连接失败 %s", err)
+			logger.Errorf("kafka 连接失败 %s", err)
 			time.Sleep(time.Second)
 			continue
 		}
@@ -240,7 +239,7 @@ func newKafka(c Config) *kmq {
 		}
 		leaderConn, err := kafka.Dial("tcp", net.JoinHostPort(leader.Host, strconv.Itoa(leader.Port)))
 		if err != nil {
-			log.Fatalf("获取领导节点失败")
+			logger.Fatal("获取领导节点失败")
 		}
 		// 集群地址
 		var address = make([]string, 0)

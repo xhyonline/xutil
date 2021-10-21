@@ -8,6 +8,7 @@ import (
 
 	"github.com/xhyonline/xutil/sig"
 
+	"github.com/xhyonline/xutil/logger"
 	"go.etcd.io/etcd/clientv3"
 )
 

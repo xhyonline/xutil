@@ -3,12 +3,11 @@ package db
 import (
 	"time"
 
-	"github.com/xhyonline/xutil/xlog"
+	"github.com/xhyonline/xutil/logger"
+
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
-
-var log = xlog.Get().Debugger()
 
 // Config 数据库配置
 type Config struct {
@@ -35,20 +34,20 @@ func NewDataBase(c *Config) *gorm.DB {
 			"@tcp("+c.Host+":"+c.Port+")/"+c.Name+
 			"?charset=utf8mb4&parseTime=True&loc=Local&timeout=90s"), &gorm.Config{})
 		if err != nil {
-			log.WithError(err).Warn("waiting for connect to db")
+			logger.Errorf("waiting for connect to db")
 			time.Sleep(time.Second * 2)
 			continue
 		}
 		dbs, err := db.DB()
 		if err != nil {
-			log.WithError(err).Warn("waiting for connect to db")
+			logger.Errorf("waiting for connect to db")
 			time.Sleep(time.Second * 2)
 			continue
 		}
 		dbs.SetConnMaxLifetime(time.Duration(c.Lifetime) * time.Second)
 		dbs.SetMaxOpenConns(c.MaxActiveConn)
 		dbs.SetMaxIdleConns(c.MaxIdleConn)
-		log.Info("Mysql connect successful.")
+		logger.Info("Mysql connect successful.")
 		break
 	}
 	return db

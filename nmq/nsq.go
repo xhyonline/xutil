@@ -3,15 +3,14 @@ package nmq
 import (
 	"encoding/json"
 
+	"github.com/xhyonline/xutil/logger"
+
 	"time"
 
 	"github.com/levigross/grequests"
 	nsq "github.com/nsqio/go-nsq"
 	"github.com/sirupsen/logrus"
-	"github.com/xhyonline/xutil/xlog"
 )
-
-var logger = xlog.Get().Debugger()
 
 // NSQ context
 type nsqContext struct {
@@ -74,14 +73,15 @@ func decorate(f HandlerFunc) nsq.HandlerFunc {
 func (c *nsqClient) Sub(topic, channel string, handler HandlerFunc) {
 	q, err := nsq.NewConsumer(topic, channel, nsq.NewConfig())
 	if err != nil {
-		logger.WithError(err).Panic("init nsq consumer failed")
+		logger.Panic("init nsq consumer failed")
+		return
 	}
 	c.consumers = append(c.consumers, q)
 	q.AddHandler(decorate(handler))
 	q.SetLogger(NewLogrusLoggerAtLevel(logrus.WarnLevel))
 	err = q.ConnectToNSQLookupd(c.config.SubHost + ":" + c.config.SubHTTP)
 	if err != nil {
-		logger.WithError(err).Panic("nsq consumer connect to lookupd failed")
+		logger.Panicf("nsq consumer connect to lookupd failed %s", err)
 	}
 	logger.Infof("订阅 nsq topic %s by %s", topic, channel)
 }
@@ -110,7 +110,7 @@ func (c *nsqClient) CreateTopic(topic string) error {
 	_, err := grequests.Post("http://"+c.config.PubHost+":"+c.config.PubHTTP+"/topic/create",
 		&grequests.RequestOptions{Params: map[string]string{"topic": topic}})
 	if err != nil {
-		logger.WithError(err).Errorf("创建主题 %s 出错", topic)
+		logger.Errorf("创建主题 %s 出错 %s", topic, err)
 		return err
 	}
 	logger.Infof("创建主题 %s 成功", topic)
