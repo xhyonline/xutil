@@ -54,7 +54,7 @@ func (s *MicroMicroServiceDiscovery) watch() {
 	for _, item := range getResp.Kvs {
 		err = s.addService(item.Key, item.Value)
 		if err != nil {
-			logger.Warnf("发现不合规的节点key:%s value:", string(item.Key), string(item.Value))
+			logger.Warnf("发现不合规的节点key:%s value:%s", string(item.Key), string(item.Value))
 			continue
 		}
 	}
