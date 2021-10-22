@@ -91,7 +91,7 @@ func (s *Resolver) Scheme() string {
 
 // ResolveNow 实现第三方 resolver.Resolver 的接口,监视目标更新
 func (s *Resolver) ResolveNow(rn resolver.ResolveNowOptions) {
-	logger.Infof("ResolveNow 触发了")
+
 }
 
 // SetHook

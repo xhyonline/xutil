@@ -175,7 +175,7 @@ func (s *MicroMicroServiceDiscovery) getServerName(key []byte) string {
 
 // getNodeByKey 通过 key 获取节点
 func (s *MicroMicroServiceDiscovery) getNodeByKey(key []byte) Node {
-	result := strings.Split(strings.Split(strings.Replace(string(key), s.prefix, "", 1), "/")[1], ":")
+	result := strings.Split(strings.Split(strings.Replace(string(key), s.prefix, "", 1), "/")[0], ":")
 	return Node{
 		Host: result[0],
 		Port: result[1],
