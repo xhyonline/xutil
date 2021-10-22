@@ -101,7 +101,7 @@ func StartGRPCServer(f func(server *grpc.Server), option ...Option) <-chan struc
 	g.run()
 	ctx := sig.Get().RegisterClose(g)
 	// 服务监控
-	pprofMonitor()
+	g.pprofMonitor()
 	// TODO promethus 监控注册
 	// 服务注册
 	if err := micro.NewMicroServiceRegister(component.Instance.ETCD, schema, 10).
