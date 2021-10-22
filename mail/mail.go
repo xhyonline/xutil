@@ -42,7 +42,7 @@ func (m *Mail) Send(subject, from, body string, toUser ...string) error {
 //		User: "xxxxx@qq.com",
 //		Pass: "授权码",
 //		Host: "smtp.qq.com",
-//		Port: 465,
+//		port: 465,
 //	})
 func NewMail(c Config) *Mail {
 	if !c.validate() {

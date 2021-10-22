@@ -1,20 +1,19 @@
-package etcd
+package grpc
 
 import (
-	"log"
 	"sync"
+
+	"google.golang.org/grpc/resolver"
 
 	"github.com/xhyonline/xutil/micro"
 
 	"github.com/xhyonline/xutil/logger"
 	"go.etcd.io/etcd/clientv3"
-
-	"google.golang.org/grpc/resolver"
 )
 
 var schema = "/micro/server/"
 
-type Resolver struct {
+type resolverInstance struct {
 	// etcd 客户端
 	cli *clientv3.Client
 	// 负载均衡器
@@ -34,11 +33,10 @@ type Resolver struct {
 // 参数释义:
 // target : 当客户端调用 grpc.Dial() 方法时,会将入参解析到 target 中,例如 grpc.Dial("dns://some_authority/foo.bar") 就会解析成  &Target{Scheme: "dns", Authority: "some_authority", Endpoint: "foo.bar"}
 // cc 负载均衡器
-func (s *Resolver) Build(target resolver.Target, cc resolver.ClientConn, opts resolver.BuildOptions) (resolver.Resolver, error) {
-	logger.Infof("grpc 启动触发")
+func (s *resolverInstance) Build(target resolver.Target, cc resolver.ClientConn, opts resolver.BuildOptions) (resolver.Resolver, error) {
 	s.cc = cc
 	prefix := target.Scheme + target.Endpoint + "/"
-	logger.Info("触发 " + prefix)
+	logger.Info("grpc 客户端启动,将监控 etcd 前缀:" + prefix)
 	s.discoverInstance = micro.NewMicroServiceDiscovery(s.cli, prefix)
 	s.discoverInstance.SetAfterAddServiceHook(s.SetHook)
 	s.discoverInstance.SetAfterRemoveServiceHook(s.RemoveHook)
@@ -46,7 +44,7 @@ func (s *Resolver) Build(target resolver.Target, cc resolver.ClientConn, opts re
 }
 
 // SetServiceList 设置服务
-func (s *Resolver) SetServiceList(key, val string) {
+func (s *resolverInstance) SetServiceList(key, val string) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	// 写入服务
@@ -59,7 +57,7 @@ func (s *Resolver) SetServiceList(key, val string) {
 }
 
 // DelServiceList 删除服务地址
-func (s *Resolver) DelServiceList(key string) {
+func (s *resolverInstance) DelServiceList(key string) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	addr := s.serverList[key]
@@ -68,11 +66,11 @@ func (s *Resolver) DelServiceList(key string) {
 	s.cc.UpdateState(resolver.State{
 		Addresses: s.GetServices(),
 	})
-	log.Println("删除服务地址:" + addr.Addr + " 并移除负载均衡器")
+	logger.Info("删除服务地址:" + addr.Addr + " 并移除负载均衡器")
 }
 
 // GetServices 获取当前的服务列表
-func (s *Resolver) GetServices() []resolver.Address {
+func (s *resolverInstance) GetServices() []resolver.Address {
 	address := make([]resolver.Address, 0, len(s.serverList))
 	for _, v := range s.serverList {
 		address = append(address, v)
@@ -81,31 +79,31 @@ func (s *Resolver) GetServices() []resolver.Address {
 }
 
 // Close 实现 resolver.Resolver 的关闭接口
-func (s *Resolver) Close() {
+func (s *resolverInstance) Close() {
 }
 
 // Scheme 实现了第三方方法 resolver.Register() 的入参接口 resolver.Builder
-func (s *Resolver) Scheme() string {
+func (s *resolverInstance) Scheme() string {
 	return schema
 }
 
 // ResolveNow 实现第三方 resolver.Resolver 的接口,监视目标更新
-func (s *Resolver) ResolveNow(rn resolver.ResolveNowOptions) {
+func (s *resolverInstance) ResolveNow(rn resolver.ResolveNowOptions) {
 
 }
 
 // SetHook
-func (s *Resolver) SetHook(key, _ string, node *micro.Node) {
+func (s *resolverInstance) SetHook(key, _ string, node *micro.Node) {
 	s.SetServiceList(key, node.Host+":"+node.Port)
 }
 
 // RemoveHook
-func (s *Resolver) RemoveHook(key string) {
+func (s *resolverInstance) RemoveHook(key string) {
 	s.DelServiceList(key)
 }
 
-func NewResolver(name string, client *clientv3.Client) resolver.Builder {
-	return &Resolver{
+func newResolver(name string, client *clientv3.Client) resolver.Builder {
+	return &resolverInstance{
 		cli:        client,
 		serverList: make(map[string]resolver.Address),
 		lock:       sync.Mutex{},
