@@ -6,6 +6,8 @@ import (
 	"runtime"
 	"strconv"
 
+	"github.com/xhyonline/xutil/helper"
+
 	"github.com/sirupsen/logrus"
 )
 
@@ -24,15 +26,32 @@ type message struct {
 func (m *formatter) Format(entry *logrus.Entry) ([]byte, error) {
 	var buffer = new(bytes.Buffer)
 	date := entry.Time.Format("2006-01-02 15:04:05")
-	pc, file, line, ok := runtime.Caller(7)
+
 	var (
 		f        = "未知方法名"
 		filePath = "未知文件路径"
 	)
-	if ok {
+	layer := 7
+	for {
+		pc, file, line, ok := runtime.Caller(layer)
+		if !ok {
+			break
+		}
 		f = runtime.FuncForPC(pc).Name()
 		filePath = file + ":" + strconv.Itoa(line)
+		if !helper.InArray(f, []string{
+			"github.com/xhyonline/xutil/logger.Infof",
+			"github.com/xhyonline/xutil/logger.Warnf",
+			"github.com/xhyonline/xutil/logger.Errorf",
+			"github.com/xhyonline/xutil/logger.Debugf",
+			"github.com/xhyonline/xutil/logger.Panicf",
+			"github.com/xhyonline/xutil/logger.Fatalf",
+		}) {
+			break
+		}
+		layer++
 	}
+
 	body, _ := json.Marshal(&message{
 		TimeStamp: entry.Time.Unix(),
 		Date:      date,
