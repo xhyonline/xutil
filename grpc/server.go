@@ -83,7 +83,7 @@ func (s *grpcInstance) run() {
 }
 
 // StartGRPCServer 启动 GRPC 服务
-func StartGRPCServer(f func(server *grpc.Server), option ...Option) <-chan struct{} {
+func StartGRPCServer(f func(server *grpc.Server), option ...Option) {
 	g := &grpcInstance{Server: grpc.NewServer(registerMiddleware()...)}
 	for _, optionFunc := range option {
 		optionFunc(g)
@@ -112,7 +112,7 @@ func StartGRPCServer(f func(server *grpc.Server), option ...Option) <-chan struc
 		logger.Fatalf("服务注册失败 %s", err)
 	}
 	logger.Info("服务"+configs.Name, "已启动,启动地址:"+address)
-	return ctx.Done()
+	<-ctx.Done()
 }
 
 // internalIP 获取内网 IP
