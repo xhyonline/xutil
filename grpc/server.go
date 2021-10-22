@@ -32,6 +32,8 @@ type grpcInstance struct {
 	ip string
 	// 服务名
 	name string
+	// 服务向 etcd 续租的租期
+	lease int64
 }
 
 // startCheck 启动前的检查
@@ -47,6 +49,9 @@ func (s *grpcInstance) startCheck() {
 	}
 	if s.etcd == nil {
 		logger.Fatalf("服务启动失败,无法向 etcd 注册服务")
+	}
+	if s.lease == 0 {
+		s.lease = 10
 	}
 }
 
@@ -68,9 +73,17 @@ func WithAppName(name string) Option {
 	}
 }
 
+// WithETCD
 func WithETCD(client *clientv3.Client) Option {
 	return func(s *grpcInstance) {
 		s.etcd = client
+	}
+}
+
+// WithLease
+func WithLease(lease int64) Option {
+	return func(s *grpcInstance) {
+		s.lease = lease
 	}
 }
 
@@ -112,7 +125,7 @@ func StartGRPCServer(f func(server *grpc.Server), option ...Option) {
 	g.pprofMonitor()
 	// TODO promethus 监控注册
 	// 服务注册
-	if err := micro.NewMicroServiceRegister(component.Instance.ETCD, schema, 10).
+	if err := micro.NewMicroServiceRegister(component.Instance.ETCD, schema, g.lease).
 		Register(g.name, &micro.Node{
 			Host: g.ip,
 			Port: strconv.Itoa(g.port),

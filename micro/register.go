@@ -51,7 +51,7 @@ func NewMicroServiceRegister(client *clientv3.Client, prefix string, lease int64
 func (s *MicroServiceRegister) GracefulClose() {
 	logger.Info("服务发现组件正在准备做退出的清理工作")
 	s.cancelFunc()
-	time.Sleep(time.Second * 5)
+	time.Sleep(time.Second * 3)
 	defer s.client.Close()
 	logger.Info("服务发现组件清理工作已完成")
 }
