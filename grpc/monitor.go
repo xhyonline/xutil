@@ -8,9 +8,9 @@ import (
 )
 
 // pprofMonitor pprof 监控
-func pprofMonitor() {
+func (s *grpcInstance) pprofMonitor() {
 	go func() {
-		if err := http.ListenAndServe(internalIP()+":0", nil); err != nil {
+		if err := http.ListenAndServe(s.ip+":0", nil); err != nil {
 			logger.Errorf("pprof 服务启动失败")
 			os.Exit(1)
 		}
