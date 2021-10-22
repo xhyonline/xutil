@@ -6,7 +6,6 @@ import (
 
 	"go.etcd.io/etcd/clientv3"
 
-	"github.com/xhyonline/micro-server-framework/component"
 	"github.com/xhyonline/xutil/micro"
 	"github.com/xhyonline/xutil/sig"
 
@@ -130,7 +129,7 @@ func StartGRPCServer(f func(server *grpc.Server), option ...Option) {
 	g.pprofMonitor()
 	// TODO promethus 监控注册
 	// 服务注册
-	if err := micro.NewMicroServiceRegister(component.Instance.ETCD, schema, g.lease).
+	if err := micro.NewMicroServiceRegister(g.etcd, schema, g.lease).
 		Register(g.name, &micro.Node{
 			Host: g.ip,
 			Port: strconv.Itoa(g.port),
