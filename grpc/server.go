@@ -44,9 +44,6 @@ func (s *grpcInstance) startCheck() {
 	if s.name == "" {
 		logger.Fatalf("服务启动失败,请设定服务名")
 	}
-	if s.port == 0 {
-		logger.Fatalf("服务启动失败,无端口")
-	}
 	if s.etcd == nil {
 		logger.Fatalf("服务启动失败,无法向 etcd 注册服务")
 	}
@@ -55,32 +52,37 @@ func (s *grpcInstance) startCheck() {
 	}
 }
 
+// WithPort 自定义端口,默认将会随机生成端口进行注册
 func WithPort(port int) Option {
 	return func(s *grpcInstance) {
 		s.port = port
 	}
 }
 
+// WithIP 自定义 IP 地址,默认为 eth0 网卡对应的 ipv4 地址
+// Windows 下没有 eth0 网卡的,默认将会使用 127.0.0.1 作为 IP
 func WithIP(ip string) Option {
 	return func(s *grpcInstance) {
 		s.ip = ip
 	}
 }
 
+// WithAppName 服务名
 func WithAppName(name string) Option {
 	return func(s *grpcInstance) {
 		s.name = name
 	}
 }
 
-// WithETCD
+// WithETCD 必填项, etcd 客户端实例
 func WithETCD(client *clientv3.Client) Option {
 	return func(s *grpcInstance) {
 		s.etcd = client
 	}
 }
 
-// WithLease
+// WithLease 自定义租约,默认为 10,
+// 这意味着你的 grpc 服务每 10s 秒将会向 etcd 发送心跳包进行续租
 func WithLease(lease int64) Option {
 	return func(s *grpcInstance) {
 		s.lease = lease
@@ -111,11 +113,14 @@ func StartGRPCServer(f func(server *grpc.Server), option ...Option) {
 	}
 	// 启动前检查
 	g.startCheck()
-	address := g.ip + ":" + strconv.Itoa(g.port)
-	l, err := net.Listen("tcp", address)
+	l, err := net.Listen("tcp", g.ip+":"+strconv.Itoa(g.port))
 	if err != nil {
-		logger.Fatalf("%s 监听失败 %s", address, err)
+		logger.Fatalf("%s 服务监听失败", err)
 	}
+	if g.port == 0 {
+		g.port = l.Addr().(*net.TCPAddr).Port
+	}
+	address := g.ip + ":" + strconv.Itoa(g.port)
 	g.listener = l
 	// 注册服务
 	f(g.Server)
