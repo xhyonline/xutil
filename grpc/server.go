@@ -2,7 +2,6 @@ package grpc
 
 import (
 	"net"
-	"os"
 	"strconv"
 
 	"go.etcd.io/etcd/clientv3"
@@ -76,8 +75,7 @@ func (s *grpcInstance) GracefulClose() {
 func (s *grpcInstance) run() {
 	go func() {
 		if err := s.Serve(s.listener); err != nil {
-			logger.Errorf("服务 %s 启动失败 %s", configs.Name, err)
-			os.Exit(1)
+			logger.Fatalf("服务 %s 启动失败 %s", configs.Name, err)
 		}
 	}()
 }
@@ -120,8 +118,7 @@ func internalIP() string {
 	var address = "127.0.0.1"
 	addr, err := helper.IntranetAddress()
 	if err != nil {
-		logger.Errorf("获取内网地址失败,服务停止 %s", err)
-		os.Exit(1)
+		logger.Fatalf("获取内网地址失败,服务停止 %s", err)
 	}
 	v, _ := addr["eth0"]
 	var ip net.IP
