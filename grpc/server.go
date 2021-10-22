@@ -7,7 +7,6 @@ import (
 	"go.etcd.io/etcd/clientv3"
 
 	"github.com/xhyonline/micro-server-framework/component"
-	"github.com/xhyonline/micro-server-framework/configs"
 	"github.com/xhyonline/xutil/micro"
 	"github.com/xhyonline/xutil/sig"
 
@@ -31,12 +30,17 @@ type grpcInstance struct {
 	port int
 	// 默认 eth0 网卡的 ipv4 地址 ,如果没有网卡则为 127.0.0.1
 	ip string
+	// 服务名
+	name string
 }
 
 // startCheck 启动前的检查
 func (s *grpcInstance) startCheck() {
 	if s.ip == "" {
 		s.ip = internalIP()
+	}
+	if s.name == "" {
+		logger.Fatalf("服务启动失败,请设定服务名")
 	}
 	if s.port == 0 {
 		logger.Fatalf("服务启动失败,无端口")
@@ -58,6 +62,12 @@ func WithIP(ip string) Option {
 	}
 }
 
+func WithAppName(name string) Option {
+	return func(s *grpcInstance) {
+		s.name = name
+	}
+}
+
 func WithETCD(client *clientv3.Client) Option {
 	return func(s *grpcInstance) {
 		s.etcd = client
@@ -66,16 +76,16 @@ func WithETCD(client *clientv3.Client) Option {
 
 // GracefulClose 优雅停止
 func (s *grpcInstance) GracefulClose() {
-	logger.Info("服务" + configs.Name + "接收到关闭通知")
+	logger.Info("服务" + s.name + "接收到关闭通知")
 	s.GracefulStop()
-	logger.Info("服务" + configs.Name + "已优雅停止")
+	logger.Info("服务" + s.name + "已优雅停止")
 }
 
 // run 启动
 func (s *grpcInstance) run() {
 	go func() {
 		if err := s.Serve(s.listener); err != nil {
-			logger.Fatalf("服务 %s 启动失败 %s", configs.Name, err)
+			logger.Fatalf("服务 %s 启动失败 %s", s.name, err)
 		}
 	}()
 }
@@ -103,13 +113,13 @@ func StartGRPCServer(f func(server *grpc.Server), option ...Option) {
 	// TODO promethus 监控注册
 	// 服务注册
 	if err := micro.NewMicroServiceRegister(component.Instance.ETCD, schema, 10).
-		Register(configs.Name, &micro.Node{
+		Register(g.name, &micro.Node{
 			Host: g.ip,
 			Port: strconv.Itoa(g.port),
 		}); err != nil {
 		logger.Fatalf("服务注册失败 %s", err)
 	}
-	logger.Info("服务"+configs.Name, "已启动,启动地址:"+address)
+	logger.Info("服务"+g.name, "已启动,启动地址:"+address)
 	<-ctx.Done()
 }
 
