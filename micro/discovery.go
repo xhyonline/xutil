@@ -25,6 +25,10 @@ type MicroMicroServiceDiscovery struct {
 	nodes map[string][]*Node
 	// 保证 nodes 并发安全
 	lock sync.RWMutex
+	// 移除服务后调用的方法
+	afterRemoveServiceFunc func(key string)
+	// 新增服务后触发的方法
+	afterAddServiceFunc func(key, value string, node *Node)
 }
 
 // NewMicroServiceDiscovery 实例化一个服务发现实例
@@ -103,7 +107,20 @@ func (s *MicroMicroServiceDiscovery) addService(key, value []byte) error {
 		nodes = make([]*Node, 0)
 	}
 	s.nodes[name] = append(nodes, node)
+	if s.afterAddServiceFunc != nil {
+		s.afterAddServiceFunc(string(key), string(value), node)
+	}
 	return nil
+}
+
+// SetAfterAddServiceHook 新增服务之后触发的钩子
+func (s *MicroMicroServiceDiscovery) SetAfterAddServiceHook(f func(key, value string, node *Node)) {
+	s.afterAddServiceFunc = f
+}
+
+// SetAfterRemoveServiceHook 移除服务之后触发的钩子
+func (s *MicroMicroServiceDiscovery) SetAfterRemoveServiceHook(f func(key string)) {
+	s.afterRemoveServiceFunc = f
 }
 
 // removeService 删除服务
@@ -121,6 +138,9 @@ func (s *MicroMicroServiceDiscovery) removeService(key []byte) {
 		}
 	}
 	logger.Infof("服务发现删除节点 服务名:%s 节点地址:%s", name, address.Host+":"+address.Port)
+	if s.afterRemoveServiceFunc != nil {
+		s.afterRemoveServiceFunc(string(key))
+	}
 	if len(nodes) == 0 {
 		delete(s.nodes, name)
 		return
@@ -134,6 +154,16 @@ func (s *MicroMicroServiceDiscovery) GetService(name string) *Node {
 	defer s.lock.RUnlock()
 	if nodes, ok := s.nodes[name]; ok {
 		return nodes[helper.GetRandom(len(nodes))]
+	}
+	return nil
+}
+
+// GetServices 获取所有服务
+func (s *MicroMicroServiceDiscovery) GetServices(name string) []*Node {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+	if nodes, ok := s.nodes[name]; ok {
+		return nodes
 	}
 	return nil
 }

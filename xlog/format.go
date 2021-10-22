@@ -3,6 +3,7 @@ package xlog
 import (
 	"bytes"
 	"encoding/json"
+	"runtime"
 	"strconv"
 
 	"github.com/sirupsen/logrus"
@@ -23,13 +24,22 @@ type message struct {
 func (m *formatter) Format(entry *logrus.Entry) ([]byte, error) {
 	var buffer = new(bytes.Buffer)
 	date := entry.Time.Format("2006-01-02 15:04:05")
+	pc, file, line, ok := runtime.Caller(7)
+	var (
+		f        = "未知方法名"
+		filePath = "未知文件路径"
+	)
+	if ok {
+		f = runtime.FuncForPC(pc).Name()
+		filePath = file + ":" + strconv.Itoa(line)
+	}
 	body, _ := json.Marshal(&message{
 		TimeStamp: entry.Time.Unix(),
 		Date:      date,
-		FilePath:  entry.Caller.File + ":" + strconv.Itoa(entry.Caller.Line),
+		FilePath:  filePath,
 		Message:   entry.Message,
 		Level:     entry.Level,
-		Func:      entry.Caller.Function,
+		Func:      f,
 	})
 	buffer.WriteString(string(body) + "\n")
 	return buffer.Bytes(), nil
