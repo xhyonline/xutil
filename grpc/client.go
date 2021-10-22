@@ -8,7 +8,7 @@ import (
 )
 
 // NewGRPCClient 启动一个 GRPC 客户端
-func NewGRPCClient(name string, client *clientv3.Client) (*grpc.ClientConn, error) {
+func NewGRPCClient(name string, client *clientv3.Client) *grpc.ClientConn {
 	r := newResolver(name, client)
 	resolver.Register(r)
 	conn, err := grpc.Dial(r.Scheme()+":///"+name,
@@ -17,5 +17,5 @@ func NewGRPCClient(name string, client *clientv3.Client) (*grpc.ClientConn, erro
 	if err != nil {
 		logger.Fatalf("客户端连接失败 %s", err)
 	}
-	return conn, nil
+	return conn
 }
