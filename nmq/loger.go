@@ -5,6 +5,7 @@ import (
 
 	"github.com/nsqio/go-nsq"
 	"github.com/sirupsen/logrus"
+	"github.com/xhyonline/xutil/logger"
 )
 
 var (

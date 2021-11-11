@@ -16,6 +16,10 @@ func init() {
 	instance.SetLevel(logrus.InfoLevel)
 }
 
+func GetLevel() logrus.Level {
+	return instance.GetLevel()
+}
+
 func SetLoggerProduct(path string) {
 	instance = instance.Product(path, true)
 }
