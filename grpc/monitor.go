@@ -14,5 +14,3 @@ func (s *grpcInstance) pprofMonitor() {
 		}
 	}()
 }
-
-// TODO prometheus

@@ -4,6 +4,8 @@ import (
 	"net"
 	"strconv"
 
+	"github.com/xhyonline/xutil/metrics"
+
 	"go.etcd.io/etcd/clientv3"
 
 	"github.com/xhyonline/xutil/micro"
@@ -33,6 +35,8 @@ type grpcInstance struct {
 	name string
 	// 服务向 etcd 续租的租期
 	lease int64
+	// prometheus 监控网关
+	prometheusGateWay string
 }
 
 // startCheck 启动前的检查
@@ -88,6 +92,13 @@ func WithLease(lease int64) Option {
 	}
 }
 
+// WithPrometheus 注册 prometheus 监控
+func WithPrometheus(gateway string) Option {
+	return func(s *grpcInstance) {
+		s.prometheusGateWay = gateway
+	}
+}
+
 // GracefulClose 优雅停止
 func (s *grpcInstance) GracefulClose() {
 	logger.Info("服务" + s.name + "接收到关闭通知")
@@ -127,7 +138,9 @@ func StartGRPCServer(f func(server *grpc.Server), option ...Option) {
 	ctx := sig.Get().RegisterClose(g)
 	// 服务监控
 	g.pprofMonitor()
-	// TODO promethus 监控注册
+	if g.prometheusGateWay != "" {
+		metrics.Init(g.prometheusGateWay, g.name)
+	}
 	// 服务注册
 	if err := micro.NewMicroServiceRegister(g.etcd, schema, g.lease).
 		Register(g.name, &micro.Node{
@@ -147,7 +160,7 @@ func internalIP() string {
 	if err != nil {
 		logger.Fatalf("获取内网地址失败,服务停止 %s", err)
 	}
-	v, _ := addr["eth0"]
+	v := addr["eth0"]
 	var ip net.IP
 	for _, item := range v {
 		if ip = item.To4(); ip != nil {
