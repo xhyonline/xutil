@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"hash/crc32"
+	"math/big"
 	"math/rand"
 	"reflect"
 	"regexp"
@@ -258,7 +259,7 @@ func GetRandom(num int) int {
 func Md5(str string) string {
 	md5Inst := md5.New()
 	_, _ = md5Inst.Write([]byte(str))
-	return hex.EncodeToString(md5Inst.Sum([]byte("")))
+	return hex.EncodeToString(md5Inst.Sum(nil))
 }
 
 // sha1
@@ -269,27 +270,15 @@ func Sha1(str string) string {
 }
 
 // 字符串转换为hash数字
-func HashCode(s string) int {
-	v := int(crc32.ChecksumIEEE([]byte(s)))
-	if v >= 0 {
-		return v
-	}
-	if -v >= 0 {
-		return -v
-	}
-	// v == MinInt
-	return v
+func HashCode(s string) uint32 {
+	return crc32.ChecksumIEEE([]byte(s))
 }
 
 // HashCodeMd5 MD5 转数字
-func HashCodeMd5(s string) int {
-	byteHash := Md5(s)
-	h := 0
-	for i := 0; i < 32; i++ {
-		h <<= 8
-		h |= int(byteHash[i]) & 0xFF
-	}
-	return h
+func HashCodeMd5(s string) uint64 {
+	h := Md5(s)
+	i, _ := big.NewInt(0).SetString(h, 16)
+	return i.Uint64()
 }
 
 // InArray 是否在数组内
