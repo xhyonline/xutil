@@ -37,6 +37,11 @@ func (s *signalInstance) RegisterClose(f Func) context.Context {
 	return server.context
 }
 
+// Close 主动触发关闭信号,触发优雅停止方法
+func (s *signalInstance) Close() {
+	s.signalChan <- syscall.SIGQUIT
+}
+
 // Get 获取单例
 func Get() *signalInstance {
 	once.Do(func() {
