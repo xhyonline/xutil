@@ -2,8 +2,6 @@ module github.com/xhyonline/xutil
 
 go 1.13
 
-
-
 require (
 	github.com/coreos/bbolt v1.3.1-etcd.8 // indirect
 	github.com/coreos/etcd v3.3.25+incompatible
@@ -33,7 +31,7 @@ require (
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
 	github.com/nsqio/go-nsq v1.1.0
 	github.com/onsi/ginkgo v1.12.0 // indirect
-	github.com/prometheus/client_golang v1.11.0
+	github.com/prometheus/client_golang v1.11.1
 	github.com/prometheus/common v0.26.0
 	github.com/rs/xid v1.2.1
 	github.com/segmentio/kafka-go v0.4.22
